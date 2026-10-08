@@ -7,6 +7,7 @@ require (
 	github.com/0xdeafcafe/photon v0.0.0-20261008232558-b01e070b3366
 	github.com/charmbracelet/x/ansi v0.11.8
 	github.com/charmbracelet/x/term v0.2.2
+	github.com/coder/websocket v1.8.14
 )
 
 require (

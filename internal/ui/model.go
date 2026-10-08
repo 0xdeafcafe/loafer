@@ -89,9 +89,13 @@ func New(ctx context.Context, st *store.Store, api *slack.Client) *Model {
 	}
 }
 
+// SignedOut says whether it quit because Slack stopped taking the sign-in.
+func (m *Model) SignedOut() bool { return m.live == "signed out" }
+
 type (
 	storeMsg  struct{}
 	bootedMsg struct{ err error }
+	liveMsg   struct{ err error }
 	openedMsg struct {
 		conv string
 		err  error
@@ -118,6 +122,11 @@ func (m *Model) waitStore() tea.Cmd {
 
 func (m *Model) boot() tea.Cmd {
 	return func() tea.Msg { return bootedMsg{m.st.Boot(m.ctx, m.api)} }
+}
+
+// listen holds the websocket until loafer closes or Slack signs it out.
+func (m *Model) listen() tea.Cmd {
+	return func() tea.Msg { return liveMsg{m.st.Live(m.ctx, m.api)} }
 }
 
 // openConv shows conversation id, keeping what was being written in the
@@ -192,11 +201,11 @@ func (m *Model) send() tea.Cmd {
 		}
 	}
 	return func() tea.Msg {
-		if _, err := m.api.Post(m.ctx, conv, text, ""); err != nil {
-			return sentMsg{err}
+		msg, err := m.api.Post(m.ctx, conv, text, "")
+		if err == nil {
+			m.st.Add(conv, msg) // before the websocket's copy, if it's slow
 		}
-		// ponytail: refetch until the websocket brings messages live.
-		return sentMsg{m.st.Refresh(m.ctx, m.api, conv)}
+		return sentMsg{err}
 	}
 }
 
@@ -229,20 +238,36 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.pal = NewPalette(m.ground, Aubergine, false)
 		m.drawn.Clear()
 	case storeMsg:
-		return m, m.waitStore()
+		m.st.Read(func(v store.View) {
+			if l := v.Link(); l != "" {
+				m.live = l
+			}
+		})
+		cmd := m.waitStore()
+		if m.open != "" && m.scroll == 0 {
+			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
+		}
+		return m, cmd
 	case bootedMsg:
 		switch {
 		case msg.err == nil:
-			m.live = "live"
 		case slack.SignedOut(msg.err):
 			m.live = "signed out"
-			return m, m.say("signed out · run loafer login", true)
+			return m, tea.Quit // run signs in again and reopens
 		default:
+			// The socket boots again once it gets through.
 			m.live = "offline"
-			return m, m.say("couldn't reach Slack: "+msg.err.Error(), true)
+			return m, tea.Batch(m.listen(), m.say("couldn't reach Slack: "+msg.err.Error(), true))
 		}
+		cmd := m.listen()
 		if m.open == "" && len(m.side) > 0 {
-			return m, m.openSelected()
+			cmd = tea.Batch(cmd, m.openSelected())
+		}
+		return m, cmd
+	case liveMsg:
+		if slack.SignedOut(msg.err) {
+			m.live = "signed out"
+			return m, tea.Quit
 		}
 	case openedMsg:
 		if msg.err != nil {

@@ -25,6 +25,10 @@ func (v View) Team() slack.Team         { return v.s.team }
 func (v View) Conv(id string) *Conv     { return v.s.convs[id] }
 func (v View) Window(id string) *Window { return v.s.windows[id] }
 
+// Link is the websocket's state: connecting, live or offline, or "" before
+// it's been tried.
+func (v View) Link() string { return v.s.link }
+
 // Names goes up whenever people or emoji change.
 func (v View) Names() uint64 { return v.s.names }
 

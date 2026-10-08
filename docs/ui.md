@@ -458,7 +458,7 @@ Status flashes go in the hint line for 6 s, as in rush. Examples: `sent`, `copie
 The connection state lives in header row 1:
 - `● live` in green
 - `◌ reconnecting 3s` in yellow
-- `✗ signed out · run loafer login` in red
+- signed out, loafer closes and asks you to sign in again, then reopens
 
 ## Sizes
 

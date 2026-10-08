@@ -89,7 +89,7 @@ func (c *Client) Call(ctx context.Context, method string, form url.Values, out a
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if session {
-		req.Header.Set("Cookie", "d="+c.creds.Cookie+"; d-s="+strconv.FormatInt(time.Now().Unix()-10, 10))
+		req.Header.Set("Cookie", c.cookie())
 	} else {
 		// A real app's tokens (xoxb-, xapp-) go as a bearer, with no cookie.
 		req.Header.Set("Authorization", "Bearer "+c.creds.Token)
