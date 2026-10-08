@@ -7,11 +7,8 @@
 
 ## install
 
-until [photon](../photon) (the bits it shares with rush) is on github, build it from a checkout with photon beside it:
-
 ```sh
-git clone https://github.com/0xdeafcafe/loafer
-cd loafer && go install ./cmd/loafer
+go install github.com/0xdeafcafe/loafer/cmd/loafer@latest
 ```
 
 needs go 1.27.1 or newer, and macos for now (sign-ins live in the keychain).

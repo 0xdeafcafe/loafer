@@ -1,0 +1,46 @@
+# loafer's Slack app. Create it at https://api.slack.com/apps?new_app=1
+# ("From a manifest"), install it to the workspace, then run `loafer app init`.
+display_information:
+  name: loafer
+  description: Your terminal Slack client's way back to you.
+  background_color: "#4a154b"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: loafer
+    always_online: false
+  shortcuts:
+    - name: Ask Claude about this
+      type: message
+      callback_id: ask_claude
+      description: Hand this message to Claude through loafer and rush
+    - name: Save to loafer
+      type: message
+      callback_id: save_loafer
+      description: Keep this for later in loafer
+  slash_commands:
+    - command: /loafer
+      description: Talk to your loafer
+      usage_hint: "[status | ask <question>]"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - im:write
+      - im:history
+      - commands
+      - users:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_home_opened
+      - message.im
+  interactivity:
+    is_enabled: true
+  socket_mode_enabled: true
+  org_deploy_enabled: false
+  token_rotation_enabled: false
