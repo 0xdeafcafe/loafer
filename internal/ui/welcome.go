@@ -162,7 +162,7 @@ func (m *Model) drawWelcome(k welKey) []canvas.Row {
 	red := ink.Text.Fg(m.pal.Red.FG)
 	logo := welPart{rows: m.logoFrame(k.lace)}
 
-	title := canvas.Row{canvas.T("welcome to ", ink.Text), canvas.T("loafer", ink.Bright.With(canvas.Bold|canvas.Italic))}
+	title := canvas.Row{canvas.T("welcome to ", ink.Text), canvas.T("loafer", m.pal.Brand.With(canvas.Bold|canvas.Italic))}
 	if k.name != "" {
 		title = append(title, canvas.T(", "+k.name, ink.Text))
 	}
