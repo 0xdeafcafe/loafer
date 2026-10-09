@@ -130,9 +130,16 @@ func (m *Model) buildJump(v store.View) {
 		if c == nil || id == m.open {
 			continue
 		}
-		score, lit, ok := match(q, jumpTitle(v, c))
+		title := jumpTitle(v, c)
+		score, lit, ok := match(q, title)
 		if !ok {
 			continue
+		}
+		switch t := strings.ToLower(title); { // the name typed out beats any fuzzy hit
+		case t == strings.ToLower(q):
+			score += 1000
+		case strings.HasPrefix(t, strings.ToLower(q)):
+			score += 500
 		}
 		switch {
 		case needsYou(c):

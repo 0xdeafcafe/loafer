@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/store"
 )
 
@@ -104,6 +105,32 @@ func TestEditKeepsCursor(t *testing.T) {
 	m.setFocus(onMsgs)
 	if m.sel != edited {
 		t.Fatalf("back from editing, the cursor moved: %q, want %q", m.sel, edited)
+	}
+}
+
+// A name typed out comes first, then names it starts, however recent or
+// unread the fuzzy hits are.
+func TestJumpNameFirst(t *testing.T) {
+	m := fixture(t)
+	var b slack.UserBoot
+	b.Self.ID = "U0"
+	b.Channels = []slack.Conversation{
+		{ID: "C1", Name: "dev", IsChannel: true, IsMember: true},
+		{ID: "C2", Name: "alerts", IsChannel: true, IsMember: true},
+		{ID: "C3", Name: "devops", IsChannel: true, IsMember: true},
+		{ID: "C4", Name: "d-everything-v", IsChannel: true, IsMember: true},
+		{ID: "C5", Name: "deploy-events", IsChannel: true, IsMember: true},
+	}
+	m.st.ApplyBoot(b)
+	m.open, m.back = "C2", []string{"C3", "C5", "C4"}
+	m.render()
+	press(m, tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl}, r('d'), r('e'), r('v'))
+	var got []string
+	for _, it := range m.bar.items {
+		got = append(got, it.conv)
+	}
+	if len(got) < 3 || got[0] != "C1" || got[1] != "C3" {
+		t.Fatalf("dev found %v", got)
 	}
 }
 
