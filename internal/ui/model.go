@@ -422,7 +422,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 // setFocus moves focus to f; the message cursor starts on the newest
 // message, and goes when focus leaves.
 func (m *Model) setFocus(f focus) {
-	if f == onMsgs && m.focus != onMsgs {
+	if f == onMsgs && m.focus != onMsgs && m.sel == "" { // after an edit, stay on what was edited
 		m.pick(by(-1))
 	}
 	if f != onMsgs {
