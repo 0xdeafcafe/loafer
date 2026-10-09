@@ -45,3 +45,11 @@ func (s *Store) stepped(st Step, err error) {
 		}
 	})
 }
+
+// Cold says whether there's nothing to draw yet: no cache loaded, and no
+// boot through. A cold start shows the welcome.
+func (s *Store) Cold() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.self == ""
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,8 +21,27 @@ func demo() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go chatter(ctx, srv)
-	_, err := tea.NewProgram(ui.New(ctx, store.New(), srv.Client())).Run()
+	m := ui.New(ctx, store.New(), srv.Client())
+	if os.Getenv("LOAFER_WELCOME") != "" {
+		m.Welcome(true)
+		slowBoot(srv)
+	}
+	_, err := tea.NewProgram(m).Run()
 	return err
+}
+
+// slowBoot has the made-up Slack answer boot's calls over a few seconds,
+// as a big workspace's would, so the welcome can be watched filling in.
+func slowBoot(srv *slacktest.Server) {
+	for method, after := range map[string]time.Duration{
+		"client.userBoot":            900 * time.Millisecond,
+		"users.channelSections.list": 1600 * time.Millisecond,
+		"client.counts":              2200 * time.Millisecond,
+		"emoji.list":                 3000 * time.Millisecond,
+		"users.list":                 4200 * time.Millisecond,
+	} {
+		time.AfterFunc(after, srv.Hold(method))
+	}
 }
 
 // What #dev says, round and round. None of it names you, so none of

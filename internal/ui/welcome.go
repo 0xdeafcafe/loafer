@@ -331,3 +331,12 @@ func count(n int) string {
 	}
 	return s
 }
+
+// WelcomeIfCold shows the welcome if the store has nothing to draw: a
+// first run, or a workspace just signed in to. hold shows it whatever the
+// cache, waiting for a key once ready (LOAFER_WELCOME=1).
+func (m *Model) WelcomeIfCold(hold bool) {
+	if hold || m.st.Cold() {
+		m.Welcome(hold)
+	}
+}

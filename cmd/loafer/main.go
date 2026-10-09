@@ -152,6 +152,7 @@ func open(all []slack.Creds) (bool, error) {
 		}
 		saved.Go(func() { st.WriteBehind(ctx, path) })
 		ms[i] = ui.New(ctx, st, slack.New(creds))
+		ms[i].WelcomeIfCold(os.Getenv("LOAFER_WELCOME") != "")
 	}
 	x := ui.NewMulti(ms...)
 	p := tea.NewProgram(x)
