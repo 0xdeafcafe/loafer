@@ -56,10 +56,12 @@ type Model struct {
 	bar       jumper   // ctrl+k
 
 	input    []rune
+	ments    []mention // the runs of input that are mentions
 	cur      int
-	drafts   map[string][]rune // what was left written in each conversation
-	editing  string            // the message the composer is changing
-	deleting string            // the message d was pressed on once
+	pop      popup            // @ and # completion
+	drafts   map[string]draft // what was left written in each conversation
+	editing  string           // the message the composer is changing
+	deleting string           // the message d was pressed on once
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -84,7 +86,7 @@ func New(ctx context.Context, st *store.Store, api *slack.Client) *Model {
 	return &Model{
 		st: st, api: api, ctx: ctx,
 		ground: theme.Dark, pal: NewPalette(theme.Dark, Aubergine, false),
-		live: "connecting", drafts: map[string][]rune{},
+		live: "connecting", drafts: map[string]draft{},
 		drawn: rows.NewCache[rowKey, []canvas.Row](keepRows), heights: map[string]int{},
 	}
 }
@@ -136,11 +138,9 @@ func (m *Model) openConv(id string) tea.Cmd {
 		m.cancelEdit()
 	}
 	if m.open != "" {
-		m.drafts[m.open] = m.input
+		m.keep(m.open)
 	}
-	m.input = m.drafts[id]
-	delete(m.drafts, id)
-	m.cur = len(m.input)
+	m.restore(id)
 	m.open, m.scroll, m.sel, m.deleting = id, 0, "", ""
 	if i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id }); i >= 0 {
 		m.sideAt = i
@@ -180,17 +180,15 @@ func (m *Model) markRead() tea.Cmd {
 }
 
 func (m *Model) send() tea.Cmd {
-	text := strings.TrimSpace(string(m.input))
+	text := strings.TrimSpace(encode(m.input, m.ments))
 	if text == "" || m.open == "" {
 		return nil
 	}
-	m.input, m.cur = nil, 0
+	m.load(nil, nil)
 	conv := m.open
 	if ts := m.editing; ts != "" {
 		m.editing = ""
-		m.input = m.drafts[conv]
-		m.cur = len(m.input)
-		delete(m.drafts, conv)
+		m.restore(conv)
 		m.st.Edit(conv, ts, text)
 		return func() tea.Msg {
 			err := m.api.Update(m.ctx, conv, ts, text)
@@ -301,6 +299,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.st.Read(m.buildJump)
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
+			m.refreshPop()
 		}
 	case tea.MouseWheelMsg:
 		if msg.Button == tea.MouseWheelUp {
@@ -330,6 +329,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.bar.on && s != "ctrl+c" && s != "f12" {
 		return m.jumpKey(k)
+	}
+	if m.focus == onCompose && m.pop.on && m.popKey(s) {
+		return nil
 	}
 	// Everywhere. ponytail: alt keys only; rush's ctrl+] leader for
 	// terminals that eat alt comes with the keymap file.
@@ -368,7 +370,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		// In the composer with text after the cursor, ctrl+k keeps its
 		// readline meaning, as in rush.
 		if m.focus == onCompose && m.cur < len(m.input) {
-			m.input = m.input[:m.cur]
+			m.splice(m.cur, len(m.input), nil)
 			return nil
 		}
 		m.openJump()
@@ -384,7 +386,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	case onMsgs:
 		return m.msgsKey(s)
 	}
-	return m.composeKey(k, s)
+	cmd := m.composeKey(k, s)
+	m.refreshPop()
+	return cmd
 }
 
 // setFocus moves focus to f; the message cursor starts on the newest
@@ -499,35 +503,35 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 				return m.edit(msg)
 			}
 		}
+		m.vertical(-1)
 	case "shift+enter", "alt+enter", "ctrl+j":
 		m.insert("\n")
 	case "backspace":
 		if m.cur > 0 {
-			m.input = append(m.input[:m.cur-1], m.input[m.cur:]...)
-			m.cur--
+			m.splice(m.cur-1, m.cur, nil)
 		}
 	case "alt+backspace", "ctrl+w":
-		i := m.cur
-		for i > 0 && m.input[i-1] == ' ' {
-			i--
-		}
-		for i > 0 && m.input[i-1] != ' ' && m.input[i-1] != '\n' {
-			i--
-		}
-		m.input = append(m.input[:i], m.input[m.cur:]...)
-		m.cur = i
+		m.splice(m.wordLeft(m.cur), m.cur, nil)
+	case "ctrl+u":
+		m.splice(m.lineStart(m.cur), m.cur, nil)
 	case "delete":
 		if m.cur < len(m.input) {
-			m.input = append(m.input[:m.cur], m.input[m.cur+1:]...)
+			m.splice(m.cur, m.cur+1, nil)
 		}
 	case "left":
 		m.cur = max(0, m.cur-1)
 	case "right":
 		m.cur = min(len(m.input), m.cur+1)
+	case "ctrl+left", "alt+b":
+		m.cur = m.wordLeft(m.cur)
+	case "ctrl+right", "alt+f":
+		m.cur = m.wordRight(m.cur)
 	case "home", "ctrl+a":
-		m.cur = 0
+		m.cur = m.lineStart(m.cur)
 	case "end", "ctrl+e":
-		m.cur = len(m.input)
+		m.cur = m.lineEnd(m.cur)
+	case "down":
+		m.vertical(1)
 	case "pgup":
 		m.scroll += max(1, m.h/2)
 	case "pgdown":
@@ -540,11 +544,7 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 	return nil
 }
 
-func (m *Model) insert(s string) {
-	r := []rune(s)
-	m.input = append(m.input[:m.cur], append(r, m.input[m.cur:]...)...)
-	m.cur += len(r)
-}
+func (m *Model) insert(s string) { m.splice(m.cur, m.cur, []rune(s)) }
 
 // moveSide moves the sidebar selection d items, onto the nearest
 // conversation (headings aren't stopped on).
