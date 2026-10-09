@@ -109,6 +109,8 @@ Rendered: section, context, divider, header, image, actions, rich_text, fields, 
 
 ## Claude pane
 
+Superseded in part by [claude-pane.md](claude-pane.md): loafer hands rush the text itself through `rush session`, with no plugin, once rush can stream an answer back.
+
 rush is optional. loafer runs fully without it; the AI features (the Claude pane, "summarise this thread", "what needs my attention") need it, because they run on your own agents and accounts through rush rather than Slack's AI. At start loafer checks for `rush` on the PATH and that the loafer plugin is installed (one cheap `exec.LookPath` plus a stat, cached, never on the UI goroutine). Without them the AI entries still show in the rail and the ctrl+k bar, greyed, with one line on how to turn them on (`go install …/rush` then `loafer plugin install`). Nothing AI-related is imported into the client's hot path: the integration lives in `internal/rushlink` and only runs when used.
 
 The pane starts and shows an agent session through rush. loafer ships one rush plugin (`plugin/plugin.json`, protocol "rush") that speaks rush's framed JSON-RPC on fd 3 from loafer's own code:
