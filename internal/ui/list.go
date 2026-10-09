@@ -38,6 +38,9 @@ func fingerprint(msg *slack.Message) string {
 	if msg.Edited != nil {
 		b.WriteByte('e')
 	}
+	if len(msg.PinnedTo) > 0 {
+		b.WriteByte('p')
+	}
 	for _, r := range msg.Reactions {
 		b.WriteString(r.Name)
 		b.WriteString(strconv.Itoa(r.Count))

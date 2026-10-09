@@ -129,6 +129,17 @@ What loafer sends and reads, all UNVERIFIED until a DevTools capture (`internal/
 - Remove: `saved.delete` with `item_type, item_id, ts` (FOUND, above).
 - The `saved_*` RTM events' bodies aren't read: any of them fetches the list again, once it's been opened.
 
+The message actions menu (`internal/slack/actions.go`), also UNVERIFIED:
+- Save: `saved.add` with `item_type=message, item_id=<channel>, ts` (the found shape above, `todo_state` left out). A duplicate is guessed to answer an
+  `already_*` code (`already_saved`), which loafer takes as done.
+- Remind me: the same `saved.add` with `date_due` (unix seconds, a guess; `saved.list`'s `date_due` is read the same way). Picked over `reminders.add`
+  because the web client's "remind me about this" is a saved item with a due time now (`saved_reminder` / `saved_due` are its events), and Later already
+  draws due times. Already saved, it becomes `saved.update` with the same keys and the new `date_due`.
+- Pin: `pins.add` / `pins.remove` with `channel, timestamp` (documented Web API). `already_pinned` and `no_pin` are taken as done. A pinned message carries
+  `pinned_to: [channel ids]` in history (documented). `pin_added` / `pin_removed` events carry `channel_id` and `item.message.ts`; read defensively.
+- Mark unread: `conversations.mark` with the `ts` of the message before (the web client's way), or a microsecond before if that isn't held. Not used
+  for threads, whose `subscriptions.thread.mark` keys are still unconfirmed.
+
 ## 5. Drafts
 
 FOUND methods: `drafts.list`, `drafts.listActive`, `drafts.create`, `drafts.update`, `drafts.delete`, `drafts.bulkDelete`, `drafts.info`.

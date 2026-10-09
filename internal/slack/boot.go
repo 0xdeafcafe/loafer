@@ -198,6 +198,7 @@ type Message struct {
 	ReplyUsers  []string       `json:"reply_users"`
 	LatestReply string         `json:"latest_reply"`
 	Edited      *struct{}      `json:"edited"`
+	PinnedTo    []string       `json:"pinned_to"` // the conversations it's pinned in
 	Reactions   []Reaction     `json:"reactions"`
 	Blocks      jsontext.Value `json:"blocks"`
 	Attachments jsontext.Value `json:"attachments"`

@@ -1,9 +1,6 @@
 package ui
 
 import (
-	"log/slog"
-	"net/url"
-	"os/exec"
 	"slices"
 	"strings"
 
@@ -327,12 +324,6 @@ func spanText(v store.View, s mrkdwn.Span) string {
 	return s.Text
 }
 
-func (m *Model) copyText(msg slack.Message) tea.Cmd {
-	var text string
-	m.st.Read(func(v store.View) { text = plainText(v, msg.Text) })
-	return tea.Batch(tea.SetClipboard(text), m.say("copied the message", false))
-}
-
 // permalink is the message's link in Slack.
 func (m *Model) permalink(msg slack.Message) string {
 	var domain string
@@ -342,29 +333,4 @@ func (m *Model) permalink(msg slack.Message) string {
 		link += "?thread_ts=" + msg.ThreadTS + "&cid=" + m.open // a reply's, as Slack makes them
 	}
 	return link
-}
-
-// openLink opens the first web link in msg in the browser. Only http,
-// https and mailto: messages are from anyone, and other schemes can
-// start apps.
-func (m *Model) openLink(msg slack.Message) tea.Cmd {
-	for _, l := range mrkdwn.Parse(msg.Text) {
-		for _, s := range l.Spans {
-			if s.Kind != mrkdwn.Link {
-				continue
-			}
-			u, err := url.Parse(s.Target)
-			if err != nil || (u.Scheme != "http" && u.Scheme != "https" && u.Scheme != "mailto") {
-				continue
-			}
-			target := u.String()
-			return tea.Batch(m.say("opening "+target, false), func() tea.Msg {
-				if err := exec.Command("open", target).Run(); err != nil {
-					slog.Warn("open link", "err", err)
-				}
-				return nil
-			})
-		}
-	}
-	return m.say("no link in that one", false)
 }

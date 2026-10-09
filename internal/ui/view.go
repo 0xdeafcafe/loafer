@@ -77,6 +77,9 @@ func (m *Model) render() []canvas.Row {
 			out = m.overlayAttach(out)
 		}
 		out = m.overlayBlocks(v, out)
+		if m.acts.menu.on {
+			out = m.overlayMenu(v, out)
+		}
 	})
 	return out
 }
@@ -439,7 +442,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"b N", "browse, new dm"}, {"z m s x", "fold mute move leave"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {".", "actions"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":
