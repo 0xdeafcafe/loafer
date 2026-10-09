@@ -243,7 +243,7 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 	if open { // the conversation showing: plum, Slack's own, where the cursor isn't
 		mark = canvas.T("▍", base.Fg(m.pal.Brand.FG))
 	}
-	if selected {
+	if selected && m.focus == onSide { // the cursor shows only where the keys go
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
 	left := canvas.Row{mark, canvas.T(" "+glyph+" ", name.With(0).Fg(glyphFG)), canvas.T(v.Title(c), name)}

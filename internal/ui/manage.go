@@ -143,7 +143,7 @@ func (m *Model) sideHead(it sideItem, w int, selected bool) canvas.Row {
 		base = ink.Hover
 		mark = canvas.T(" ", base)
 	}
-	if selected {
+	if selected && m.focus == onSide {
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
 	if it.folded {

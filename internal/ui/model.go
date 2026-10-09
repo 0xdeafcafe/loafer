@@ -567,11 +567,13 @@ func (m *Model) sideKey(s string) tea.Cmd {
 		return m.jump(1, unreadConv, "nothing unread")
 	case "/":
 		m.openJump()
-	case "enter", "l", "right":
-		m.setFocus(onCompose)
+	case "enter", "l", "right": // into the messages, as Slack's arrows go
+		var cmd tea.Cmd
 		if m.sideAt < len(m.side) {
-			return m.visit(m.side[m.sideAt].conv)
+			cmd = m.visit(m.side[m.sideAt].conv)
 		}
+		m.setFocus(onMsgs)
+		return cmd
 	case "i":
 		m.setFocus(onCompose)
 	}
@@ -587,7 +589,11 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 	case "up", "k":
 		return m.pick(by(-1))
 	case "down", "j":
-		return m.pick(by(1))
+		cmd := m.pick(by(1))
+		if m.sel == "" && cmd == nil { // past the newest: the box
+			m.setFocus(onCompose)
+		}
+		return cmd
 	case "pgup", "ctrl+u":
 		return m.pick(by(-page))
 	case "pgdown", "ctrl+d":
@@ -627,10 +633,12 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 			return tea.Batch(tea.SetClipboard(m.permalink(msg)), m.say("copied a link to the message", false))
 		}
 		return m.openLink(msg)
-	case "esc", "left", "h":
+	case "esc":
 		if m.sel != "" {
 			return m.pick(newest)
 		}
+		m.setFocus(onSide)
+	case "left", "h":
 		m.setFocus(onSide)
 	case "t", "right", "enter":
 		return m.threadAt(s)
@@ -663,6 +671,8 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 			if msg, ok := m.lastOwn(); ok {
 				return m.edit(msg)
 			}
+			m.setFocus(onMsgs) // nothing of yours to edit: up to the messages
+			return nil
 		}
 		m.vertical(-1)
 	case "shift+enter", "alt+enter", "ctrl+j":
@@ -684,6 +694,10 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 			m.splice(m.cur, m.cur+1, nil)
 		}
 	case "left":
+		if len(m.input) == 0 && m.editing == "" && !m.th.in {
+			m.setFocus(onSide) // an empty box: back to the sidebar
+			return nil
+		}
 		m.cur = max(0, m.cur-1)
 	case "right":
 		m.cur = min(len(m.input), m.cur+1)
