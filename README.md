@@ -32,6 +32,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **conversations**: slack's mrkdwn and markdown both, so bots' headings, lists and tables come out as they meant them, and ```go blocks are highlighted (rush's highlighter, 15 or so languages). then attachments, reactions, threads' reply counts and a line where you'd read up to. drawn from the cache first, so it opens before slack has answered.
 - **keys for everything**: `ctrl+k` jumps anywhere, `ctrl+n` goes to whatever needs you, `alt+←` goes back, and there's a cursor over the messages for editing, binning, copying and opening links. the full list is in [docs/ui.md](docs/ui.md#keys).
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
+- **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 
 on the way, in this order: live updates over the websocket, threads, block kit buttons and modals, images, dms, activity, later, search and notifications. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
 
