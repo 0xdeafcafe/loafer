@@ -29,7 +29,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 ## what it does
 
 - **the sidebar**: your sections in slack's order, unread in bold, mentions in yellow.
-- **conversations**: slack's mrkdwn and markdown both, so bots' headings, lists and tables come out as they meant them, and ```go blocks are highlighted (rush's highlighter, 15 or so languages). then attachments, reactions, threads' reply counts and a line where you'd read up to. drawn from the cache first, so it opens before slack has answered.
+- **conversations**: slack's mrkdwn and markdown both, so bots' headings, lists and tables come out as they meant them, and ```go blocks are highlighted (rush's highlighter, 15 or so languages). block kit and slack's rich text draw too, buttons and all, though nothing presses yet. then attachments, files, reactions, threads' reply counts and a line where you'd read up to. drawn from the cache first, so it opens before slack has answered.
 - **keys for everything**: `ctrl+k` jumps anywhere, `ctrl+n` goes to whatever needs you, `alt+←` goes back, and there's a cursor over the messages for editing, binning, copying and opening links. the full list is in [docs/ui.md](docs/ui.md#keys).
 - **notifications** while it's open, by slack's own rules (dms, mentions, your keywords, your threads; not what's muted, snoozed or in front of you), and a line when someone's typing.
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
