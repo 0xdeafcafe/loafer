@@ -88,6 +88,7 @@ type Model struct {
 	flashExpiry time.Time
 
 	drawn     *rows.Cache[rowKey, []canvas.Row] // messages as drawn
+	pix       picState                          // which of them wait on a picture (picture.go)
 	heights   map[string]int                    // each drawn message's rows, by ts
 	index     rows.Index                        // the open window's messages' rows
 	indexOf   indexKey
