@@ -9,7 +9,6 @@ import (
 
 	"github.com/0xdeafcafe/loafer/internal/store"
 	"github.com/0xdeafcafe/photon/canvas"
-	"github.com/0xdeafcafe/photon/fuzzy"
 	"github.com/0xdeafcafe/photon/termimg"
 	"github.com/0xdeafcafe/photon/theme"
 )
@@ -36,6 +35,8 @@ type jumpItem struct {
 }
 
 const jumpCap = 50
+
+var jumpGlyph = map[store.Kind]string{store.Channel: "# ", store.Private: "⊡ ", store.IM: "● ", store.MPIM: "⁂ "}
 
 func (m *Model) openJump() {
 	m.bar = jumper{on: true}
@@ -71,7 +72,7 @@ func (m *Model) buildJump(v store.View) {
 		if c == nil || id == m.open {
 			continue
 		}
-		score, lit, ok := fuzzy.Match(q, jumpTitle(v, c))
+		score, lit, ok := match(q, jumpTitle(v, c))
 		if !ok {
 			continue
 		}
@@ -245,7 +246,7 @@ func (m *Model) jumpRow(v store.View, it jumpItem, w int, sel bool, fill canvas.
 	if sel {
 		mark = canvas.T("▍ ", base.Fg(m.pal.Orange.FG))
 	}
-	glyph := map[store.Kind]string{store.Channel: "# ", store.Private: "⊡ ", store.IM: "● ", store.MPIM: "⁂ "}[c.Kind]
+	glyph := jumpGlyph[c.Kind]
 	row := canvas.Row{mark, canvas.T(glyph, base.Fg(ink.Dim.FG))}
 	name := base.Fg(ink.Text.FG)
 	if c.Unread {

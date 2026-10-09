@@ -57,10 +57,20 @@ type conv struct {
 }
 
 // New starts a server holding the workspace in workspace.go.
-func New() *Server {
+func New() *Server { return start(false) }
+
+// NewBig starts one holding that workspace inside a big company's
+// (big.go), for measuring loafer at the size it'll meet.
+func NewBig() *Server { return start(true) }
+
+func start(big bool) *Server {
 	s := &Server{prefs: map[string]string{}, convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
-	s.seed(time.Now())
+	now := time.Now()
+	s.seed(now)
 	s.seedPeople()
+	if big {
+		s.seedBig(now)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
 	mux.HandleFunc("/upload/", s.upload)
@@ -245,7 +255,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 			c := s.convs[id]
 			if c.IsIM {
 				ims = append(ims, c.wire())
-			} else {
+			} else if c.IsMember { // boot lists only the channels you're in
 				chans = append(chans, c.wire())
 			}
 		}
@@ -268,7 +278,18 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		return map[string]any{"channels": chans, "mpims": mpims, "ims": ims}, ""
 
 	case "users.list":
-		return map[string]any{"members": s.users, "response_metadata": map[string]string{"next_cursor": ""}}, ""
+		// Paged as Slack pages it; the cursor is just where the next page starts.
+		from, _ := strconv.Atoi(f.Get("cursor"))
+		limit, err := strconv.Atoi(f.Get("limit"))
+		if err != nil || limit <= 0 {
+			limit = 1000
+		}
+		from = min(max(0, from), len(s.users))
+		to, next := min(from+limit, len(s.users)), ""
+		if to < len(s.users) {
+			next = strconv.Itoa(to)
+		}
+		return map[string]any{"members": s.users[from:to], "response_metadata": map[string]string{"next_cursor": next}}, ""
 
 	case "emoji.list":
 		return map[string]any{"emoji": s.emoji}, ""

@@ -42,6 +42,10 @@ func (v View) Link() string { return v.s.link }
 // Names goes up whenever people or emoji change.
 func (v View) Names() uint64 { return v.s.names }
 
+// Layout goes up whenever Sidebar might say something new: conversations
+// come or go, are renamed or reordered, or sections or people change.
+func (v View) Layout() uint64 { return v.s.side + v.s.names }
+
 // Person is who id is, or a stand-in carrying the id while users.list
 // hasn't said.
 func (v View) Person(id string) Person {
@@ -87,7 +91,7 @@ func (v View) Title(c *Conv) string {
 // order to show them. Slack's sections are used when it gave them; else
 // Channels, Direct messages and Apps.
 func (v View) Sidebar() []Section {
-	placed := map[string]bool{}
+	placed := make(map[string]bool, len(v.s.convs))
 	var out []Section
 	add := func(sec Section, ids []string) {
 		sec.Convs = nil

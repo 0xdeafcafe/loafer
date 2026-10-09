@@ -48,6 +48,7 @@ type Model struct {
 	sideAt   int        // the selected item
 	sideTop  int        // first item shown
 	sideSeen uint64     // store version side was built from
+	sc       sideCache  // what the sidebar costs, kept (perf.go)
 
 	open      string   // the conversation shown
 	newAt     string   // its last_read when opened, where the "new" line goes

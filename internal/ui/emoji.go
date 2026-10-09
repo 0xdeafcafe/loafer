@@ -6,7 +6,6 @@ import (
 
 	"github.com/0xdeafcafe/loafer/internal/emoji"
 	"github.com/0xdeafcafe/loafer/internal/store"
-	"github.com/0xdeafcafe/photon/fuzzy"
 )
 
 // Emoji in the UI: shortcodes drawn as characters, and finding them by
@@ -81,7 +80,7 @@ func (e *emojiUI) find(v store.View, q string, loose bool, limit int) []emojiHit
 	}
 	for _, ns := range [][]string{emoji.Names(), custom} {
 		for _, n := range ns {
-			score, lit, ok := fuzzy.Match(q, n)
+			score, lit, ok := match(q, n)
 			if !ok || (!loose && score < 100) {
 				continue
 			}

@@ -200,7 +200,7 @@ func (s *Store) Apply(ev slack.Event) {
 		}
 		s.update(func() {
 			if c := s.convs[e.Channel.ID]; c != nil && strings.HasSuffix(ev.Type, "_rename") {
-				c.Name = e.Channel.Name // a rename carries only id and name
+				c.Name, s.side = e.Channel.Name, s.side+1 // a rename carries only id and name
 				return
 			}
 			e.Channel.IsMember = true
@@ -212,7 +212,7 @@ func (s *Store) Apply(ev slack.Event) {
 			Channel string `json:"channel"`
 		}
 		if jsonx.Unmarshal(ev.Raw, &e) == nil {
-			s.update(func() { delete(s.convs, e.Channel) })
+			s.update(func() { delete(s.convs, e.Channel); s.side++ })
 		}
 
 	case "pin_added", "pin_removed":
@@ -294,6 +294,9 @@ func (s *Store) Add(conv string, m slack.Message) {
 		}
 		if m.TS > c.Latest {
 			c.Latest = m.TS
+			if c.Kind == IM || c.Kind == MPIM {
+				s.side++ // DMs are in order of their latest
+			}
 		}
 		if c.Kind == IM || c.Kind == MPIM {
 			s.tabs.sawDM(conv, m)
