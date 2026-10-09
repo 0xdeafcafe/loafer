@@ -386,7 +386,14 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inThread(func() { m.insert(msg.Content); m.refreshPop() })
 		}
 	case tea.MouseWheelMsg:
+		if m.emo.pick.on {
+			return m, m.pickMouse(msg)
+		}
 		m.wheel(msg)
+	case tea.MouseClickMsg:
+		if m.emo.pick.on {
+			return m, m.pickMouse(msg)
+		}
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
 	default:

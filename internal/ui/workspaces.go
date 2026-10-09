@@ -111,6 +111,11 @@ func (x *Multi) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x, x.all(msg)
 	case tea.BackgroundColorMsg, tea.FocusMsg, tea.BlurMsg, uv.CellSizeEvent:
 		return x, x.all(msg)
+	case tea.MouseClickMsg:
+		if len(x.ws) > 1 {
+			msg.X -= railW // the panes start after the rail
+		}
+		return x, x.to(x.at, msg)
 	case tea.KeyPressMsg:
 		if msg.String() == "alt+w" && len(x.ws) > 1 {
 			return x, x.show(x.ws[(x.at+1)%len(x.ws)])
