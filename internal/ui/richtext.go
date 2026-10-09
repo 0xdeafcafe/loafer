@@ -155,23 +155,36 @@ func listRows(p *Palette, v store.View, l mrkdwn.Line, w int) []canvas.Row {
 	return rows
 }
 
-// codeRows draws a code block on a panel the width of the message, one
-// cell in from either side, highlighted if its language is known, and
-// cut (not wrapped at words) where a line's too long.
+// codeMinW and codeMaxW bound a code block's panel: as wide as its widest
+// line, so it doesn't slab out to the edge, within these.
+const codeMinW, codeMaxW = 32, 100
+
+// codeRows draws a code block on a panel as wide as its widest line
+// (codeMinW to codeMaxW, and no wider than the message), one cell in from
+// either side, highlighted if its language is known, and cut (not
+// wrapped at words) where a line's too long.
 func codeRows(p *Palette, lines []mrkdwn.Line, w int) []canvas.Row {
 	lang := hl.For(lines[0].Lang)
-	inner := max(1, w-2)
 	var st hl.State
-	var out []canvas.Row
-	for _, l := range lines {
-		src := ""
+	src := make([]canvas.Row, len(lines))
+	widest := 0
+	for k, l := range lines {
+		text := ""
 		if len(l.Spans) > 0 {
-			src = strings.ReplaceAll(l.Spans[0].Text, "\t", "    ")
+			text = strings.ReplaceAll(l.Spans[0].Text, "\t", "    ")
 		}
-		var r canvas.Row
-		lang.Line(&st, src, func(i, j int, c hl.Class) {
-			r = append(r, canvas.T(src[i:j], p.Code[c]))
+		lang.Line(&st, text, func(i, j int, c hl.Class) {
+			src[k] = append(src[k], canvas.T(text[i:j], p.Code[c]))
 		})
+		widest = max(widest, src[k].Width())
+	}
+	if tag := lines[0].Lang; tag != "" && len(src) > 0 {
+		widest = max(widest, src[0].Width()+cellw.String(tag)+len(codeGap)+1) // the tag beside the first line
+	}
+	w = min(w, max(codeMinW, min(codeMaxW, widest+2)))
+	inner := max(1, w-2)
+	var out []canvas.Row
+	for _, r := range src {
 		for {
 			out = append(out, canvas.Fit(append(canvas.Row{canvas.T(" ", p.Panel)}, canvas.Cut(r, inner)...), w, p.Panel))
 			if r.Width() <= inner {
