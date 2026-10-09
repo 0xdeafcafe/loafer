@@ -22,6 +22,8 @@ loafer notifyd install   # notifications while it's closed (uninstall, status)
 loafer report     # zip the logs and latest profile for a bug report
 ```
 
+the first time you open a workspace there's no cache to draw from, so it says hello while it fetches everything once, ticking off each part as slack answers, with the handful of keys worth knowing. it gets out of the way by itself when it's done, or on any key once your sidebar's in. after that it opens from the cache. `LOAFER_WELCOME=1 loafer --demo` shows it on the made-up workspace.
+
 ## signing in
 
 loafer talks to slack the way the desktop app does, with your session's `xoxc-` token and its `d` cookie, so it sees everything you do and needs no admin to approve anything. `loafer login` tells you where to copy both from (the desktop app's devtools, or the browser's) and checks them with slack before keeping them in the keychain.
