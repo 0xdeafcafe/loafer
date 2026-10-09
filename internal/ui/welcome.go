@@ -216,6 +216,8 @@ func (m *Model) drawWelcome(k welKey) []canvas.Row {
 	bootOK := p.Has(store.StepBoot) && !p.Bad(store.StepBoot)
 	detail := func(s store.Step, n int, what string) string {
 		switch {
+		case p.Bad(s) && (s == store.StepBoot || s == store.StepCounts):
+			return "not yet, trying again" // the socket boots again when it gets through
 		case p.Bad(s):
 			return "couldn't, carrying on"
 		case n > 0:
