@@ -10,6 +10,7 @@ import (
 	"github.com/0xdeafcafe/loafer/internal/store"
 	"github.com/0xdeafcafe/photon/canvas"
 	"github.com/0xdeafcafe/photon/fuzzy"
+	"github.com/0xdeafcafe/photon/termimg"
 	"github.com/0xdeafcafe/photon/theme"
 )
 
@@ -268,6 +269,7 @@ func faint(r canvas.Row, fg theme.RGB) canvas.Row {
 		s.St = s.St.Fg(fg)
 		s.St.A &^= canvas.Bold
 		s.St.Link = ""
+		s.Text = termimg.Blank(s.Text) // a picture's id is its colour, gone here
 		out[i] = s
 	}
 	return out

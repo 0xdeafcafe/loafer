@@ -38,9 +38,10 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **live**: messages, edits, deletes, reactions and read state arrive over the same websocket the desktop app uses, and it catches up on what it missed when it drops.
 - **emoji**: `:shortcodes:` are drawn as emoji, `r` on a message reacts (and un-reacts) through a picker, and `:sm` in the box completes to `:smile:`.
 - **search**: `ctrl+f` searches messages with slack's own modifiers (`in:#dev from:@drew is:thread`), the matched words lit, and `enter` goes to the message, fetching what's around it if it's old.
+- **pictures**: in kitty and ghostty, avatars and images are drawn as pictures, fetched once and kept small on disk. elsewhere it's initials and a `▣ name` line, as before.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 
-on the way, in this order: threads, block kit buttons and modals, images, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
+on the way, in this order: threads, block kit buttons and modals, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
 
 ## when it goes wrong
 

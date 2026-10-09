@@ -143,10 +143,10 @@ Notes:
   - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. Collapsed sections with unreads show a count; quiet collapsed sections fold into one `▸ Social · Product · 3 more` line.
   - Rows: unread names are bright and bold, read ones plain sub, muted ones faint. On the right, the unread count is dim, and mentions are `@2` in yellow bold.
   - `↓ 4 more unread` and `↑ …` at the edges are Slack's "More unread messages" pills, drawn as rush's `↓ N more` chip.
-- **Avatars**: 2×2 cells beside the name and first line. They're kitty images, or initials on a chip tinted from the user's id.
+- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line.
 - **Pane header**: rush's chrome-filled block. It shows the channel, its topic dim, members `⊙ 4`, saved `◆`, and search `⌕`. One tab row, with the active tab underlined in orange.
 - **Messages**:
-  - **Header.** A 2×2-cell avatar (kitty image, or initials on a tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
+  - **Header.** An avatar (a 2×1 kitty picture, or initials on a 2×2 tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
   - **Day dividers** are a dim label centred on nothing, Slack's pill without the pill. The current day sticks to the top as a chrome chip.
   - **The "new" line** is a full-width orange rule with `new` at the right.
   - **Attachments and blocks** sit behind a `▌` in their colour. Fields lay out in two columns when there's room. The footer is dim with ` · `. Long bodies fold at 8 rows to `⋯ show more`, in blue.
@@ -212,7 +212,7 @@ Rendering:
 - **Selects and overflow menus** are a chip with `▾` that opens rush's picker sheet.
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
-- **Images** use kitty placeholders up to 12 rows tall, or `▣ name 1200×800` when graphics are off.
+- **Images** (image blocks, attachments' images, image files) are kitty placeholders up to 8 rows tall, with their `▣ name 1200×800` line (or the file's line) under them as a caption; with graphics off it's just that line. One on its way holds the rows it'll take when its size is known, so nothing jumps when it lands. A context block's images are a picture a row high beside its text. Behind an overlay, pictures go blank.
 - **Headers** are bold and bright, with a blank row above unless they come first. **Sections** are their text, then their fields, two columns when each gets 20 cells, then the accessory as its chip.
 - A message with blocks shows the blocks and not its text, as Slack does: the text is the notification's fallback. If none of its blocks can be drawn, the text shows instead. One that can't (an `input`, a `table`) is a faint `unsupported block (input)`.
 - **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.

@@ -116,7 +116,7 @@ func (d *e2e) unread(conv string) (unread bool) {
 
 func TestE2ESidebar(t *testing.T) {
 	d := newE2E(t)
-	for _, want := range []string{"Crumb & Co", "▾ Starred", "▾ Team", "▾ Channels", "▾ Direct messages", "▾ Apps",
+	for _, want := range []string{"Crumb & Co", "▾ Starred", "▾ 🍞 Team", "▾ Channels", "▾ Direct messages", "▾ Apps",
 		"# general", "⊡ design", "⁂ priya, jo", "◇ deploybot", "3 unread", "@ 2 mentions"} {
 		if !d.has(want) {
 			t.Errorf("sidebar lacks %q", want)

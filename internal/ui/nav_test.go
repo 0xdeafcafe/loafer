@@ -94,6 +94,19 @@ func TestEditLast(t *testing.T) {
 	}
 }
 
+func TestEditKeepsCursor(t *testing.T) {
+	m := fixture(t)
+	press(m, tab, r('e')) // the cursor starts on the newest, which is yours
+	edited := m.editing
+	if edited == "" || m.focus != onCompose {
+		t.Fatalf("e should edit: %q", edited)
+	}
+	m.setFocus(onMsgs)
+	if m.sel != edited {
+		t.Fatalf("back from editing, the cursor moved: %q, want %q", m.sel, edited)
+	}
+}
+
 func TestJump(t *testing.T) {
 	m := fixture(t)
 	press(m, tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl})
