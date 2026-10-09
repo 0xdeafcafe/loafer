@@ -90,7 +90,7 @@ func TestE2EPress(t *testing.T) {
 	d.press(tab)
 	d.typed("ok")
 	d.press(ctrlEnter)
-	d.until("the app's no", func() bool { return d.has("! say a little more than that") })
+	d.until("the app's no", func() bool { return d.has("! say a little more than that") && !d.m.kit.md.busy })
 	d.typed(" then, ship it")
 	d.press(ctrlEnter)
 	d.until("it closed", func() bool { return !d.has("Review the deploy") })

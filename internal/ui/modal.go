@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json/jsontext"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -229,12 +228,7 @@ func (m *Model) leaveModal() tea.Cmd {
 	id := m.kit.md.id
 	m.st.CloseModal(id)
 	m.syncModal()
-	return func() tea.Msg {
-		if err := m.api.CloseView(m.ctx, id); err != nil {
-			slog.Warn("views.close", "err", err)
-		}
-		return nil
-	}
+	return func() tea.Msg { return pressedMsg{m.api.CloseView(m.ctx, id)} }
 }
 
 // submitModal sends the inputs, once those that must be filled are.

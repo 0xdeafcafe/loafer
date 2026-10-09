@@ -368,13 +368,13 @@ func (m *Model) overlayBlocks(v store.View, frame []canvas.Row) []canvas.Row {
 	return frame
 }
 
-// pressed takes Slack's answer to a press or a submit; the ✻ said while
-// it was on its way goes.
+// pressed takes Slack's answer to a press, a close or a submit; the ✻
+// said while it was on its way goes.
 func (m *Model) pressed(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case pressedMsg:
 		if msg.err != nil {
-			return m.say("✗ couldn't press it: "+msg.err.Error(), true)
+			return m.say("✗ the app didn't hear it: "+msg.err.Error(), true)
 		}
 	case submittedMsg:
 		m.kit.md.busy = false
