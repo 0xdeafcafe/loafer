@@ -357,9 +357,9 @@ func (m *Model) resultRows(v store.View, x *slack.Match, words []string, w int, 
 		tail = canvas.Row{canvas.T("↩ in a thread ", fill.Fg(ink.Dim.FG))}
 	}
 	out := []canvas.Row{rightAlign(head, tail, w, fill)}
-	lead := canvas.T("    ", fill)
+	gap := canvas.T("  ", fill)
 	for _, r := range snippet(plainText(v, x.Text), words, w-4, 2, fill.Fg(ink.Text.FG), fill.Fg(m.pal.Orange.FG).With(canvas.Bold)) {
-		out = append(out, canvas.Fit(append(canvas.Row{lead}, r...), w, fill))
+		out = append(out, canvas.Fit(append(canvas.Row{gap, gap}, r...), w, fill))
 	}
 	return out
 }
@@ -424,12 +424,15 @@ func (m *Model) overlaySearch(v store.View, frame []canvas.Row) []canvas.Row {
 	if inner != f.drawnW || v.Names() != f.drawnNames {
 		f.drawn, f.drawnW, f.drawnNames = nil, inner, v.Names()
 	}
-	words := terms(f.sent)
+	var words []string
 	rowsOf := func(i int) []canvas.Row {
 		for len(f.drawn) <= i {
 			f.drawn = append(f.drawn, nil)
 		}
 		if f.drawn[i] == nil {
+			if words == nil {
+				words = terms(f.sent)
+			}
 			f.drawn[i] = m.resultRows(v, &f.found[i], words, inner, fill)
 		}
 		return f.drawn[i]
