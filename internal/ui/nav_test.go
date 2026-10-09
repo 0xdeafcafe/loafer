@@ -132,6 +132,14 @@ func TestJumpNameFirst(t *testing.T) {
 	if len(got) < 3 || got[0] != "C1" || got[1] != "C3" {
 		t.Fatalf("dev found %v", got)
 	}
+
+	// From #dev itself, typing dev still finds it.
+	press(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	m.open = "C1"
+	press(m, tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl}, r('d'), r('e'), r('v'))
+	if len(m.bar.items) == 0 || m.bar.items[0].conv != "C1" {
+		t.Fatalf("dev from #dev found %+v", m.bar.items)
+	}
 }
 
 func TestJump(t *testing.T) {

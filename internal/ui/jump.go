@@ -63,7 +63,11 @@ func (m *Model) buildActions(v store.View) {
 	q := strings.TrimSpace(string(j.query[1:]))
 	sections := [...]string{onMessage: "Message", onConv: "Conversation", onSidebar: "Everywhere", anywhere: "Everywhere"}
 	conv := &menu{conv: j.conv}
-	for _, s := range []scope{onMessage, onConv, onSidebar, anywhere} {
+	order := []scope{onMessage, onConv, onSidebar, anywhere}
+	if !j.msgOK {
+		order = []scope{onConv, onSidebar, anywhere, onMessage} // what can't be done goes last
+	}
+	for _, s := range order {
 		mn := &j.mn
 		if s == onConv {
 			mn = conv
@@ -127,7 +131,7 @@ func (m *Model) buildJump(v store.View) {
 	q := string(j.query)
 	for _, id := range m.sideConvs() {
 		c := v.Conv(id)
-		if c == nil || id == m.open {
+		if c == nil {
 			continue
 		}
 		title := jumpTitle(v, c)
@@ -149,6 +153,9 @@ func (m *Model) buildJump(v store.View) {
 		}
 		if i := slices.Index(recent, id); i >= 0 {
 			score += 12 - min(i, 10)
+		}
+		if id == m.open {
+			score -= 20 // you're there, but typing its name still finds it
 		}
 		j.items = append(j.items, jumpItem{conv: id, section: "Conversations", lit: lit, score: score})
 	}
