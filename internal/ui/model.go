@@ -573,11 +573,11 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		m.setFocus(onSide)
 	case "t", "right", "enter":
 		return m.threadAt(s)
-	case "s", "O":
+	case "D", "O":
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
-	case ".", "u", "L", "p", "m":
+	case ".", "u", "s", "p", "m":
 		return m.actKey(s)
 	case "i":
 		m.setFocus(onCompose)

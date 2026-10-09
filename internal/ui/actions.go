@@ -99,9 +99,9 @@ func (m *Model) do(key string, msg slack.Message) tea.Cmd {
 		return m.threadAt("t")
 	case "a":
 		return m.claudeAbout()
-	case "s", "O":
+	case "D", "O":
 		return m.save(key == "O")
-	case "L":
+	case "s":
 		return m.toggleSave(m.open, msg)
 	case "m":
 		m.acts.menu = menu{on: true, remind: true, thread: m.th.in, conv: m.open, msg: msg}

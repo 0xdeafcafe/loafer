@@ -271,7 +271,7 @@ Mentions inside text:
                                         │ ▍ ☺ react                     r  │
                                         │   ↩ reply in thread           t  │
                                         │   ◇ ask Claude                a  │
-                                        │   ◆ save for later            L  │
+                                        │   ◆ save for later            s  │
                                         │   ◷ remind me ▸               m  │
                                         │   ⚑ pin                       p  │
                                         │   ● mark unread from here     u  │
@@ -286,7 +286,7 @@ Mentions inside text:
 The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, and the thread pane's menu has no reply in thread or mark unread. Delete is red and works as `d d` does: the menu's `d` is the first press.
 
 - **Copy text and open link** use what's drawn, blocks, rich text, attachments and files included (not the fallback text Slack keeps for notifications), the same renderer laid out wide so nothing wraps. The bars and the code's language tag are left out. Open link takes the first http, https or mailto link in it, a button's included.
-- **Save for later** (`L`, since `s` saves files, which the menu lists too when there are some) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `L` fetches it.
+- **Save for later** (`s`) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `s` fetches it. A message with files also lists `download files` (`D`).
 - **Remind me** (`m`) is a small chooser: `1` in 20 minutes, `2` in 1 hour, `3` in 3 hours, `4` tomorrow at 9, `5` next week (Monday, at 9), each with its time. It saves the message for later with a due time, as Slack's own "remind me about this" does now, so it shows in Later as due; a message already saved just gets the new time.
 - **Pin** (`p`) pins it for the conversation, or unpins. A pinned message has a dim `⚑ pinned` line under it, and pins from other devices arrive live.
 - **Mark unread from here** (`u`) moves the read marker to the message before it, so it and everything after are unread, in the sidebar too, and the `new` line moves to it. It stays that way (watching new messages arrive doesn't read it) until the conversation is opened again. Not in threads.
@@ -474,8 +474,8 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `.` | the actions menu: everything here, with its key |
 | `c` `l` | copy its text as it's drawn, blocks and attachments included; copy a link to it |
 | `o` | open its first link, as drawn (http, https and mailto only) |
-| `s` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
-| `L` | save for later, or take it off Later |
+| `D` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
+| `s` | save for later, or take it off Later |
 | `m` | remind me: in 20 minutes, 1 hour, 3 hours, tomorrow at 9 or next week |
 | `p` | pin it, or unpin it |
 | `u` | mark unread from here |
@@ -495,7 +495,7 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 `enter` sends them, with what's written as their comment (a box of only chips sends too). The box empties, and a bar with a percent stands where the chips were while the file goes up, straight from disk and reported about ten times a second. When it's sent the message comes in over the websocket. One upload goes at a time. In a thread's box it's a reply, and `ctrl+b` sends it to the channel as well. A file past Slack's 1 GB limit, an empty one, or one that isn't a file is refused when you attach it, with the reason. If the upload fails, the chips and the words go back in the box.
 
-On a message with files, `s` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
+On a message with files, `D` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
 **Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 

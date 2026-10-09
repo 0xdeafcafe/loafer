@@ -82,8 +82,8 @@ func TestE2ESaveAndRemind(t *testing.T) {
 	d := newE2E(t)
 	jo := d.oldestInDev()
 
-	// L fetches Later first, to know whether it's saved, then saves.
-	d.press(r('L'))
+	// s fetches Later first, to know whether it's saved, then saves.
+	d.press(r('s'))
 	d.until("saved", func() bool { return len(d.srv.Saved()) == 1 })
 	if got := d.srv.Saved()[0]; got.ID != slacktest.Dev || got.TS != jo.TS || got.DateDue != 0 {
 		t.Fatalf("saved %+v", got)
@@ -97,7 +97,7 @@ func TestE2ESaveAndRemind(t *testing.T) {
 	if !d.has("remove from later") {
 		t.Fatalf("the menu should offer to take it off:\n%s", d.text)
 	}
-	d.press(esc, r('L'))
+	d.press(esc, r('s'))
 	d.until("unsaved", func() bool { return len(d.srv.Saved()) == 0 && d.calls("saved.delete") == 1 })
 
 	// Remind me: the chooser, then a time. It's saved with a due time, an
