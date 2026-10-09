@@ -28,7 +28,7 @@ func main() {
 	pprofAddr := flag.String("pprof", "", "serve net/http/pprof on this address, e.g. localhost:6061")
 	demoMode := flag.Bool("demo", false, "open a made-up workspace, with no sign-in, to try loafer")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  notifyd   notifications while loafer is closed: install, uninstall, status\n  report    zip logs and the latest profile for a bug report\n  draft     put stdin in a running loafer's composer (the rush plugin's)\n  open      go to a message in loafer (a clicked notification's)\n  version   print the version\n\nflags:\n")
+		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  notifyd   notifications while loafer is closed: install, uninstall, status\n  report    zip logs and the latest profile for a bug report\n  draft     put stdin in a running loafer's composer (the rush plugin's)\n  open      go to a message in loafer (a clicked notification's)\n  rush install  give rush's agents slack through loafer's plugin\n  version   print the version\n\nflags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -67,6 +67,13 @@ func main() {
 		return
 	case "draft":
 		os.Exit(draft(flag.Args()[1:]))
+	case "rush":
+		if flag.Arg(1) != "install" {
+			flag.Usage()
+			os.Exit(2)
+		}
+		exitIf(rushInstall())
+		return
 	case "open":
 		exitIf(openCmd(flag.Args()[1:]))
 		return
@@ -104,6 +111,7 @@ func main() {
 // first when there's none to open or Slack has stopped taking them all.
 // One whose sign-in can't be read is left out.
 func run() error {
+	offerRush()
 	defer takeOver()()
 	for {
 		ws, err := slack.Workspaces()
@@ -152,6 +160,7 @@ func open(all []slack.Creds) (bool, error) {
 		}
 		saved.Go(func() { st.WriteBehind(ctx, path) })
 		ms[i] = ui.New(ctx, st, slack.New(creds))
+		ms[i].WelcomeIfCold(os.Getenv("LOAFER_WELCOME") != "")
 	}
 	x := ui.NewMulti(ms...)
 	p := tea.NewProgram(x)

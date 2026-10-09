@@ -20,7 +20,10 @@ loafer login      # sign in again, or to another workspace
 loafer app init   # loafer's own slack app, for phone pushes and shortcuts
 loafer notifyd install   # notifications while it's closed (uninstall, status)
 loafer report     # zip the logs and latest profile for a bug report
+loafer rush install   # give rush's agents slack (it offers this once, if rush is here)
 ```
+
+the first time you open a workspace there's no cache to draw from, so it says hello while it fetches everything once, ticking off each part as slack answers, with the handful of keys worth knowing. it gets out of the way by itself when it's done, or on any key once your sidebar's in. after that it opens from the cache. `LOAFER_WELCOME=1 loafer --demo` shows it on the made-up workspace.
 
 ## signing in
 

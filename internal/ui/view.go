@@ -43,6 +43,9 @@ func (m *Model) render() []canvas.Row {
 	if m.w < 20 || m.h < 8 {
 		return []canvas.Row{{canvas.T("loafer needs a bigger window", m.pal.Main.Dim)}}
 	}
+	if m.wel.on {
+		return m.welcomeRows()
+	}
 	out := make([]canvas.Row, 0, m.h)
 	m.st.Read(func(v store.View) {
 		m.refreshSide(v)
