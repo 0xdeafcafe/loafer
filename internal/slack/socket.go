@@ -46,7 +46,7 @@ func (c *Client) Listen(ctx context.Context, to string, on func(Event) error) er
 			"slack_client":         {"desktop"},
 			"batch_presence_aware": {"1"},
 		}
-		to = Gateway + "?" + q.Encode()
+		to = c.gateway + "?" + q.Encode()
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

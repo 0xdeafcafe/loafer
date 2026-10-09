@@ -79,6 +79,9 @@ type Model struct {
 	claude claude  // the Claude tab (claude.go)
 	acts   actions // the . menu and what it does (actions.go)
 
+	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
+	wash washCache // the header's wash (wash.go)
+
 	live        string // connecting, live, offline, signed out
 	flash       string
 	flashErr    bool
@@ -279,6 +282,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
+		if m.hidden() {
+			return m, m.waitStore() // a workspace behind reads and fetches nothing
+		}
 		m.watchPeople()
 		cmd := tea.Batch(m.waitStore(), m.fetchTabs(), m.readIfWatching()) // watching it come in is reading it
 		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
@@ -294,7 +300,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.listen(), m.say("couldn't reach Slack: "+msg.err.Error(), true))
 		}
 		cmd := m.listen()
-		if m.open == "" && len(m.side) > 0 {
+		if m.open == "" && len(m.side) > 0 && !m.hidden() {
 			cmd = tea.Batch(cmd, m.openSelected())
 		}
 		return m, cmd

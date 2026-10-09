@@ -43,7 +43,7 @@ func (m *Model) waitNotes() tea.Cmd {
 
 // watch tells the store what's on screen, so it can leave out what you're
 // looking at.
-func (m *Model) watch() { m.st.Watch(m.open, !m.al.blurred) }
+func (m *Model) watch() { m.st.Watch(m.open, !m.al.blurred && !m.hidden()) }
 
 func (m *Model) alert(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
@@ -76,6 +76,7 @@ func (m *Model) alert(msg tea.Msg) tea.Cmd {
 // deliver shows n by the terminal's own notification if it has one, else
 // through macOS, off the UI goroutine.
 func (m *Model) deliver(n notify.Note) tea.Cmd {
+	n.Title = m.titled(n.Title)
 	if esc := notify.Escape(os.Getenv, n); esc != "" {
 		return tea.Raw(esc)
 	}

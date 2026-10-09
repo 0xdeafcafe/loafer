@@ -42,8 +42,8 @@ func SlackElement(attrs [][2]string, lines []string, most int) string {
 // Thread, through loafer draft. It goes after what's already written
 // there and is never sent. Done hears how it went; it needs room for one.
 type Draft struct {
-	Conv, Thread, Text string
-	Done               chan<- error
+	Team, Conv, Thread, Text string // Team picks the workspace (workspaces.go)
+	Done                     chan<- error
 }
 
 // takeDraft puts d in its box: the one on screen if that's it, else the

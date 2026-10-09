@@ -13,7 +13,7 @@ Slack's layout and features, drawn in rush's visual language. If a Slack element
    - red: failure, danger buttons, delete, overdue
    - lavender: drafts and scheduled
    - Slack's attachment colours are an exception: they're content, drawn as a narrow `▌` bar mapped through `theme.Accent` so they stay readable on any ground.
-2a. **Workspace colour.** The workspace's sidebar theme colour (aubergine for LangWatch) is the ground of the header, the tab row and the sidebar pane; the message, thread and overlay panes keep rush's ground. The header also gets rush's static gradient wash toward the right, ramping into the same colour. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
+2a. **Workspace colour.** Slack's aubergine is the ground of the header, the tab row and the sidebar pane, whichever workspace it is; the message, thread and overlay panes keep rush's ground. The workspace's own colour is in the header's static gradient wash (rush's): plain for the first 60% of the width, then ramping in four-cell steps into it at the right edge, held back wherever the header's text would stop reading. That colour is your sidebar theme's in that workspace, if you gave it one (an uncertain pref, see slack-webapp-methods.md), else one of a few dark theme colours picked by a hash of the team id, so it's the same every time. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
 3. **Bold is for what wants you**: unread channel names, mention counts, author names, section titles, key names in hints. Read things are plain; muted things are faint.
 4. **No borders around content.** Hierarchy comes from greys, one-row gaps and fills. Rounded boxes only for things you type into and things floating over the screen: the composer, ctrl+k, modals and menus.
 5. **Every list row has a marker column** and the same selection: a `selBG` fill plus an orange `▍` in column 0. Hover is `hoverBG`.
@@ -138,7 +138,8 @@ Notes:
 - **Header**, two rows plus a rule. When the terminal is 100 columns or wider, the logo (below) sits to the left of those two rows, and the header grows to 4 rows, as rush's does. Mockups below omit it.
   - Row 1: the wordmark (bold italic `loafer`, as rush does), the workspace, the state counts in rush's header style, and connection state on the right.
   - Row 2: Slack's left rail as rush's top tabs. The active one is a filled chip; badges are `·N`, yellow when they're mentions.
-  - The header, tab row and sidebar sit on the workspace colour (rule 2a). The header also gets rush's static gradient wash toward the right edge, ramping into that colour.
+  - The header, tab row and sidebar sit on the aubergine, and the header's wash ramps into the workspace's colour toward the right edge (rule 2a).
+- **Workspace rail**, only when you're signed in to more than one: four columns down the far left, a step darker than the sidebar. Each workspace is its initials on its colour (`CC` for Crumb & Co, `La` for LangWatch), the one shown marked with the orange `▍`, and under them its mentions (`@2` in yellow, `@+` past nine), else `•` when anything's unread, or a red `✗` once it's signed out.
 - **Sidebar** = rush's list pane.
   - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. A folded section is `▸ name 3 ──────` with how many it hides, and still lists what has unread, what mentions you and the conversation that's open. Not yet: quiet folded sections joined into one `▸ Social · Product · 3 more` line.
   - Rows: unread names are bright and bold, read ones plain sub, muted ones faint (and not counted in the header or by `ctrl+n`). On the right, the unread count is dim, and mentions are `@2` in yellow bold.
@@ -480,6 +481,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `alt+←` `alt+→` | back and forward through the conversations you've visited |
 | `alt+1` … `alt+5` | the tabs: Home, DMs, Activity, Later, Claude. A tab's list is fetched the first time it opens |
 | `alt+c` | the Claude tab, with the open conversation attached |
+| `alt+w` | the next workspace, when you're signed in to more than one. Each keeps its place (what's open, drafts, scroll), so it's instant. ctrl+k lists the others too, under `Workspaces`, and typing matches their names |
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
@@ -550,13 +552,13 @@ Status flashes go in the hint line for 6 s, as in rush. Examples: `sent`, `copie
 The connection state lives in header row 1:
 - `● live` in green
 - `◌ reconnecting 3s` in yellow
-- signed out, loafer closes and asks you to sign in again, then reopens
+- signed out, loafer closes and asks you to sign in again, then reopens. With several workspaces it only does that once every one is signed out: until then the one Slack let go says `✗ signed out · run loafer login` in its header, gets a red `✗` on the rail, and the flash says so wherever you are, while the rest carry on
 
 **Typing.** `drew is typing…` (or `drew and sam are typing…`, then `several people are typing…`) sits in dim italics on the row above the composer for 5 s after the last `user_typing`, for the open conversation only. Typing in threads isn't shown. One tick is armed while someone is typing, none when nobody is.
 
 **Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
 
-It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
+It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person (after the workspace's name, `Crumb & Co · #dev`, when there's more than one), the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
 
 **While it's closed.** `loafer notifyd install` writes a LaunchAgent (`~/Library/LaunchAgents/com.github.0xdeafcafe.loafer.notifyd.plist`) and loads it; again, it reloads or restarts it, so a new build takes over. `uninstall` unloads and removes it. `status` says whether launchd has it, and who has the websocket: notifyd, the TUI (notifyd parked), or nobody. notifyd holds the default workspace's websocket with the same rules and the same 3 s bursts, shown through `osascript` only, since it has no terminal. Nothing is ever in front of you, so focus doesn't count. Opening loafer takes the websocket over (notifyd parks it first) and closing it hands it back. Signed out, notifyd says `loafer was signed out; run loafer` once and waits for loafer to have been opened and closed before trying again. Clicking a notification does nothing yet. Its log is `~/Library/Logs/loafer/notifyd.jsonl`.
 

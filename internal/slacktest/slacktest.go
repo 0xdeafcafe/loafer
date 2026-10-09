@@ -70,6 +70,21 @@ func New() *Server {
 	return s
 }
 
+// NewTeam starts a second workspace beside New's: the same people and
+// conversations under another team id and name, with colour ("#rrggbb",
+// or "") as your sidebar theme there.
+func NewTeam(id, name, colour string) *Server {
+	s := New()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.team.ID, s.team.Name, s.team.Domain = id, name, strings.ToLower(id)
+	if colour != "" {
+		theme, _ := jsonx.Marshal(map[string]string{"column_bg": colour})
+		s.prefs["sidebar_theme_custom_values"] = string(theme)
+	}
+	return s
+}
+
 // Close hangs up the sockets and stops the server.
 func (s *Server) Close() {
 	s.mu.Lock()
@@ -86,8 +101,9 @@ func (s *Server) Creds() slack.Creds {
 		Token: "xoxc-slacktest", Cookie: "xoxd-slacktest"}
 }
 
-// Client is a client for the server. It points slack.Gateway here too, so
-// only one server's websocket can be listened to at a time.
+// Client is a client for the server, its websocket included. The client
+// keeps the gateway it was made with, so two servers can be listened to
+// at once.
 func (s *Server) Client() *slack.Client {
 	slack.Gateway = "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	return slack.New(s.Creds())

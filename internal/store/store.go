@@ -87,6 +87,7 @@ func (s *Store) update(f func()) {
 func (s *Store) ApplyBoot(b slack.UserBoot) {
 	s.update(func() {
 		s.self, s.team = b.Self.ID, b.Team
+		s.team.Colour = slack.ThemeColour(b.Prefs)
 		p := person(b.Self)
 		s.people[p.ID] = &p
 		s.al.prefs.Load(b.Prefs, b.DND)
