@@ -73,17 +73,19 @@ func (m *Model) alert(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// deliver shows n by the terminal's own notification if it has one, else
-// through macOS, off the UI goroutine.
+// deliver shows n through loafer's notifier app, which goes to it when
+// clicked; without one, by the terminal's own notification if it has
+// one, else osascript. It's off the UI goroutine.
 func (m *Model) deliver(n notify.Note) tea.Cmd {
 	n.Title = m.titled(n.Title)
-	if esc := notify.Escape(os.Getenv, n); esc != "" {
+	app := notify.Built()
+	if esc := notify.Escape(os.Getenv, n); esc != "" && !app {
 		return tea.Raw(esc)
 	}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
 		defer cancel()
-		if err := notify.Osascript(ctx, n); err != nil {
+		if err := notify.Show(ctx, n); err != nil {
 			slog.Warn("notify", "err", err)
 		}
 		return nil

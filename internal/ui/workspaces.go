@@ -121,6 +121,13 @@ func (x *Multi) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return x, x.to(i, msg)
 			}
 		}
+	case Goto:
+		for i, m := range x.ws {
+			if m.teamID() == msg.Team {
+				return x, tea.Batch(x.show(m), x.to(i, msg))
+			}
+		}
+		return x, nil
 	}
 	return x, x.to(x.at, msg)
 }

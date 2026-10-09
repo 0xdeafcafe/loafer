@@ -46,6 +46,10 @@ type Draft struct {
 	Done                     chan<- error
 }
 
+// Goto is a notification clicked (loafer open): the workspace at Team
+// comes to the front, on the message at TS if there is one.
+type Goto struct{ Team, Conv, TS, Thread string }
+
 // takeDraft puts d in its box: the one on screen if that's it, else the
 // conversation's or thread's kept draft, which comes back on opening it.
 func (m *Model) takeDraft(d Draft) tea.Cmd {

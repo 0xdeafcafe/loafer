@@ -32,7 +32,7 @@ func notifydCmd(sub string) error {
 		debug.SetMemoryLimit(12 << 20) // its budget is 15 MB resident
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
-		d := &notifyd.Daemon{Dir: notifyd.Dir(), Client: signIn, Show: notify.Osascript}
+		d := &notifyd.Daemon{Dir: notifyd.Dir(), Client: signIn, Show: notify.Show}
 		err := d.Run(ctx)
 		if errors.Is(err, notifyd.ErrRunning) {
 			fmt.Fprintln(os.Stderr, "loafer:", err)
@@ -51,6 +51,9 @@ func notifydCmd(sub string) error {
 			return err
 		}
 		fmt.Println("installed", a.Path())
+		if err := notify.Build(exe); err != nil {
+			fmt.Println("notifications won't open loafer when clicked:", err)
+		}
 	case "uninstall":
 		if err := a.Uninstall(); err != nil {
 			return err

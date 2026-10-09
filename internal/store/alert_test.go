@@ -80,7 +80,7 @@ func TestThreadFollowed(t *testing.T) {
 		t.Fatal("a reply in someone else's thread isn't yours")
 	}
 	s.Apply(ev(t, `{"type":"message","channel":"C1","ts":"4.0","thread_ts":"1.0","user":"UB","text":"reply"}`))
-	if n, ok := note(s); !ok || n.Body != "UB: reply" {
+	if n, ok := note(s); !ok || n.Body != "UB: reply" || n.Conv != "C1" || n.TS != "4.0" || n.Thread != "1.0" {
 		t.Fatalf("a reply to your thread: %+v", n)
 	}
 }

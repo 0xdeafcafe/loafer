@@ -183,9 +183,13 @@ func (s *Store) alert(conv string, m slack.Message) {
 	if c.Kind == Channel || c.Kind == Private {
 		title = "#" + title
 	}
+	n := notify.Note{Team: s.team.ID, Conv: conv, TS: m.TS, Title: title, Body: body}
+	if in.Reply {
+		n.Thread = m.ThreadTS
+	}
 	s.mu.RUnlock()
 	select {
-	case s.al.notes <- notify.Note{Conv: conv, Title: title, Body: body}:
+	case s.al.notes <- n:
 	default:
 	}
 }

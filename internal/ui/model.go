@@ -355,6 +355,12 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case Draft:
 		return m, m.takeDraft(msg)
+	case Goto:
+		if msg.Conv == "" || msg.TS == "" {
+			return m, nil
+		}
+		tab := m.setTab(tabHome)
+		return m, tea.Batch(tab, m.goTo(message(msg.Conv, msg.TS, msg.Thread)))
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""

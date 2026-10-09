@@ -161,6 +161,21 @@ func TestE2EWorkspaces(t *testing.T) {
 	}
 }
 
+// A clicked notification (loafer open) brings its workspace forward, on
+// its message, from another tab.
+func TestE2EGoto(t *testing.T) {
+	d := newMultiE2E(t, nil)
+	front, back := d.x.ws[0], d.x.ws[1]
+	d.until("both live", func() bool { return front.live == "live" && back.live == "live" })
+	msg := d.b.Post(slacktest.Dev, slacktest.Priya, "proofing done", "")
+	d.press(tea.KeyPressMsg{Code: '2', Mod: tea.ModAlt})
+	d.update(Goto{Team: "T0RYE", Conv: slacktest.Dev, TS: msg.TS})
+	d.until("on the message", func() bool { return d.shown() == back && back.open == slacktest.Dev && back.sel == msg.TS })
+	if back.tabs.on != tabHome || !d.has("proofing done") {
+		t.Fatalf("tab %v:\n%s", back.tabs.on, d.text)
+	}
+}
+
 func TestE2EWorkspaceSignedOut(t *testing.T) {
 	d := newMultiE2E(t, func(b *slacktest.Server) { b.SetSignedOut(true) })
 	front, back := d.x.ws[0], d.x.ws[1]

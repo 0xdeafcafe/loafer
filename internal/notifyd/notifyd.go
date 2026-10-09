@@ -25,7 +25,7 @@ import (
 type Daemon struct {
 	Dir    string                                   // the socket and the locks (Dir())
 	Client func() (*slack.Client, error)            // the sign-in, read again each time it goes live
-	Show   func(context.Context, notify.Note) error // notify.Osascript: there's no terminal to write to
+	Show   func(context.Context, notify.Note) error // notify.Show: there's no terminal to write to
 }
 
 // ErrRunning is Run's when another notifyd has the run directory.

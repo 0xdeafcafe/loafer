@@ -31,6 +31,8 @@ type draftReq struct {
 	Conv   string `json:"conv"`
 	Thread string `json:"thread,omitempty"`
 	Text   string `json:"text"`
+	Open   bool   `json:"open,omitempty"` // loafer open's: go there, with no draft (TS the message)
+	TS     string `json:"ts,omitempty"`
 }
 
 func draftSock() string {
@@ -89,6 +91,9 @@ func takeDraft(r io.Reader, teams []string, send func(tea.Msg)) error {
 	switch {
 	case jsonx.Unmarshal(b, &d) != nil:
 		return errors.New("that isn't a draft")
+	case d.Open:
+		send(ui.Goto{Team: d.Team, Conv: d.Conv, TS: d.TS, Thread: d.Thread})
+		return nil
 	case !slices.Contains(teams, d.Team):
 		return errors.New("loafer hasn't that workspace open")
 	case d.Conv == "":
@@ -122,23 +127,36 @@ func draft(args []string) int {
 	if len(args) == 3 {
 		d.Thread = args[2]
 	}
-	c, err := net.DialTimeout("unix", draftSock(), 2*time.Second)
-	if err != nil {
+	err = hand(d)
+	switch {
+	case errors.Is(err, errNotRunning):
 		fmt.Fprintln(os.Stderr, "loafer isn't running")
 		return 3
-	}
-	defer c.Close()
-	_ = c.SetDeadline(time.Now().Add(10 * time.Second))
-	if err := jsonx.MarshalWrite(c, d); err != nil {
+	case err != nil:
 		fmt.Fprintln(os.Stderr, "loafer:", err)
-		return 1
-	}
-	_ = c.(*net.UnixConn).CloseWrite()
-	out, _ := io.ReadAll(io.LimitReader(c, 4<<10))
-	if reply := strings.TrimSpace(string(out)); reply != "ok" {
-		fmt.Fprintln(os.Stderr, "loafer:", cmp.Or(reply, "no answer"))
 		return 1
 	}
 	fmt.Println("it's in loafer's composer, for you to send")
 	return 0
+}
+
+var errNotRunning = errors.New("loafer isn't running")
+
+// hand gives d to the running loafer.
+func hand(d draftReq) error {
+	c, err := net.DialTimeout("unix", draftSock(), 2*time.Second)
+	if err != nil {
+		return errNotRunning
+	}
+	defer c.Close()
+	_ = c.SetDeadline(time.Now().Add(10 * time.Second))
+	if err := jsonx.MarshalWrite(c, d); err != nil {
+		return err
+	}
+	_ = c.(*net.UnixConn).CloseWrite()
+	out, _ := io.ReadAll(io.LimitReader(c, 4<<10))
+	if reply := strings.TrimSpace(string(out)); reply != "ok" {
+		return errors.New(cmp.Or(reply, "no answer"))
+	}
+	return nil
 }

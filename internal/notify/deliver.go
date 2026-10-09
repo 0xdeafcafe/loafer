@@ -15,11 +15,15 @@ import (
 )
 
 // Note is a notification: the conversation's name or the person, and the
-// message as plain text.
+// message as plain text. Team, TS and Thread say where it's from, so
+// clicking it goes there; a burst's has none.
 type Note struct {
-	Conv  string
-	Title string
-	Body  string
+	Team   string
+	Conv   string
+	TS     string
+	Thread string // the parent, when TS is a reply
+	Title  string
+	Body   string
 }
 
 // Plain is a message's text without its mrkdwn: links by their labels,
