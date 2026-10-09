@@ -49,11 +49,13 @@ type Section struct {
 }
 
 // Window is the recent part of a conversation held in memory, oldest
-// first. More says Slack has older messages than these.
+// first. More says Slack has older messages than these; Newer that it
+// has newer ones, after a jump back to an old message (see Around).
 type Window struct {
-	Msgs []slack.Message `json:"msgs"`
-	More bool            `json:"more"`
-	used uint64          // the store's clock when last viewed, for eviction
+	Msgs  []slack.Message `json:"msgs"`
+	More  bool            `json:"more"`
+	Newer bool            `json:"newer,omitempty"`
+	used  uint64          // the store's clock when last viewed, for eviction
 }
 
 func person(u slack.User) Person {

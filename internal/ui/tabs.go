@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"cmp"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -48,8 +47,6 @@ type tabState struct {
 	seen    uint64             // the store version they were built from
 	w       int                // the width they're drawn at
 	busy    [3]bool            // a fetch is out, by store.List
-
-	wantConv, want string // the message enter is on its way to
 }
 
 // tabItem is a row of a tab's list, with what it needs drawn and acted on
@@ -204,45 +201,23 @@ func (m *Model) enterTab() tea.Cmd {
 				return nil
 			}
 		}
-		// A reply goes to its thread's parent, in the channel.
-		return tea.Batch(mark, m.goTo(a.Conv, cmp.Or(a.ThreadTS, a.TS)))
+		return tea.Batch(mark, m.goTo(message(a.Conv, a.TS, a.ThreadTS)))
 	case tabLater:
 		x := it.saved
 		if x.Type != "message" {
 			return m.say("that one only opens in Slack", false)
 		}
-		return m.goTo(x.Conv, cmp.Or(x.Msg.ThreadTS, x.TS))
+		return m.goTo(message(x.Conv, x.TS, x.Msg.ThreadTS))
 	}
 	return nil
 }
 
-// goTo opens conv with the cursor on its message at ts, once it's there.
-func (m *Model) goTo(conv, ts string) tea.Cmd {
-	known := false
-	m.st.Read(func(v store.View) { known = v.Conv(conv) != nil })
-	if !known {
-		return m.say("that's somewhere you aren't", false)
-	}
-	m.tabs.wantConv, m.tabs.want = conv, ts
-	cmd := m.visit(conv)
-	m.setFocus(onMsgs)
-	if cmd == nil { // it's open already
-		return m.seek()
-	}
-	return cmd
-}
-
-// seek puts the cursor on the message goTo was after, when its
-// conversation's open. shortcut: one older than the window held lands on
-// the oldest held (which fetches the page before); fetch around it if
-// that's not near enough.
-func (m *Model) seek() tea.Cmd {
-	if m.tabs.wantConv == "" || m.tabs.wantConv != m.open {
-		return nil
-	}
-	ts := m.tabs.want
-	m.tabs.wantConv, m.tabs.want = "", ""
-	return m.pick(func(ms []slack.Message, _ int) int { return min(msgIndex(ms, ts), len(ms)-1) })
+// message is where goTo (search's) should go: conv's message at ts, in
+// thread's thread if it's a reply.
+func message(conv, ts, thread string) slack.Match {
+	var x slack.Match
+	x.Channel.ID, x.TS, x.ThreadTS = conv, ts, thread
+	return x
 }
 
 // finish takes the Later item under the cursor off the list: done marks
@@ -507,7 +482,7 @@ func (m *Model) activityRows(v store.View, a *store.Activity, w int, now time.Ti
 	row = append(row, canvas.Fit(canvas.Row{canvas.T(who, base)}, 14, ink.Text)...)
 	row = append(row, canvas.T("  ", ink.Text))
 	if a.Reaction != "" {
-		e, _ := emoji(a.Reaction)
+		e, _ := emojiText(a.Reaction)
 		row = append(row, canvas.T(e+" ", ink.Text))
 	}
 	if c := v.Conv(a.Conv); c != nil && c.Kind <= store.Private {

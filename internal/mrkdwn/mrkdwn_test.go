@@ -31,6 +31,7 @@ func TestParse(t *testing.T) {
 		"see <https://x.io/a?b=1&amp;c|the docs>": "[0 0 \"see \" \"\"][2 0 \"the docs\" \"https://x.io/a?b=1&c\"]\n",
 		"<@U1> and <#C1|dev> <!here>":             "[3 0 \"\" \"U1\"][0 0 \" and \" \"\"][4 0 \"dev\" \"C1\"][0 0 \" \" \"\"][6 0 \"@here\" \"here\"]\n",
 		"run `go test` :tada: 10:30":              "[0 0 \"run \" \"\"][1 0 \"go test\" \"\"][0 0 \" \" \"\"][7 0 \"tada\" \"\"][0 0 \" 10:30\" \"\"]\n",
+		":+1::skin-tone-3: :+1::skin-tone-7:":     "[7 0 \"+1::skin-tone-3\" \"\"][0 0 \" \" \"\"][7 0 \"+1\" \"\"][7 0 \"skin-tone-7\" \"\"]\n",
 		"&gt; quoted &lt;b&gt;":                   "> [0 0 \"quoted <b>\" \"\"]\n",
 		"before\n```\nx := 1\n```\nafter":         "[0 0 \"before\" \"\"]\nPRE [1 0 \"x := 1\" \"\"]\n[0 0 \"after\" \"\"]\n",
 		"```one line```":                          "PRE [1 0 \"one line\" \"\"]\n",

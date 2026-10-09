@@ -36,6 +36,7 @@ type Store struct {
 	tabs     tabs   // the DMs, Activity and Later lists (tabs.go)
 
 	booted atomic.Bool // a boot has got through
+	al     alertState  // notification rules and typing (alert.go)
 
 	version atomic.Uint64
 	changed chan struct{}
@@ -48,6 +49,7 @@ func New() *Store {
 		convs:   map[string]*Conv{},
 		emoji:   map[string]string{},
 		windows: map[string]*Window{},
+		al:      newAlertState(),
 		changed: make(chan struct{}, 1),
 		dirty:   make(chan struct{}, 1),
 	}
@@ -83,6 +85,7 @@ func (s *Store) ApplyBoot(b slack.UserBoot) {
 		s.self, s.team = b.Self.ID, b.Team
 		p := person(b.Self)
 		s.people[p.ID] = &p
+		s.al.prefs.Load(b.Prefs, b.DND)
 		for _, list := range [][]slack.Conversation{b.Channels, b.IMs} {
 			for _, c := range list {
 				s.putConv(c)
@@ -230,7 +233,7 @@ func (s *Store) SetWindow(conv string, newestFirst []slack.Message, more, older 
 		if older {
 			w.Msgs = append(msgs, w.Msgs...)
 		} else {
-			w.Msgs = msgs
+			w.Msgs, w.Newer = msgs, false
 		}
 		w.More = more
 		s.touch(conv)
@@ -286,7 +289,7 @@ func (s *Store) Refresh(ctx context.Context, c *slack.Client, conv string) error
 		for i := len(msgs) - 1; i >= 0; i-- {
 			keep = append(keep, msgs[i])
 		}
-		w.Msgs = keep
+		w.Msgs, w.Newer = keep, false
 		s.touch(conv)
 	})
 	return nil

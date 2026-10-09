@@ -128,6 +128,7 @@ func (s *Store) Apply(ev slack.Event) {
 			var m slack.Message
 			if jsonx.Unmarshal(ev.Raw, &m) == nil {
 				s.Add(e.Channel, m)
+				s.alert(e.Channel, m)
 			}
 		}
 
@@ -194,6 +195,9 @@ func (s *Store) Apply(ev slack.Event) {
 			s.update(func() { delete(s.convs, e.Channel) })
 		}
 
+	case "pref_change", "dnd_updated", "user_typing":
+		s.applyAlert(ev)
+
 	case "user_change":
 		var e struct {
 			User slack.User `json:"user"`
@@ -225,7 +229,7 @@ func (s *Store) Add(conv string, m slack.Message) {
 			}
 			return
 		}
-		if w := s.windows[conv]; w != nil {
+		if w := s.windows[conv]; w != nil && !w.Newer { // a window back in time doesn't reach it
 			i, found := slices.BinarySearchFunc(w.Msgs, m.TS, func(x slack.Message, ts string) int { return strings.Compare(x.TS, ts) })
 			if found {
 				w.Msgs[i] = m
