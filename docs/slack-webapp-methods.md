@@ -206,6 +206,18 @@ is not in this cache except the boot one above (`ignore_replies:!0`, `include_st
 `huddles.*`, `search.inline`, `files.external.preview`, `email.threads.share`, `ai.alpha.agents.threads.list`, `assistant.threads.rename`,
 `meetings.processRecording`, `today.items.update`, `workflows.templates.get`, `functions.categories.steps.list`, `client.codeChannels.*`.
 
+## Notification settings and typing (UNCERTAIN, from memory of the web client)
+
+`internal/notify` reads these from `client.userBoot`'s `prefs` and `dnd`, and keeps them up with `pref_change` and `dnd_updated`. None is captured yet, so check each against a DevTools capture; a wrong key only means that setting is ignored.
+
+- `prefs.muted_channels`, `prefs.highlight_words`, `prefs.at_channel_suppressed_channels`: comma separated strings. Fairly sure.
+- `prefs.loud_channels`, `prefs.never_channels`: comma separated ids on everything and on nothing. A guess, and likely legacy.
+- `prefs.all_notifications_prefs`: a string of JSON, `{global: {global_desktop, global_keywords, ...}, channels: {<id>: {desktop, muted, suppress_at_channel, ...}}}`. The level values (`everything`, `mentions`, `nothing`) and the `desktop` and `suppress_at_channel` names are guesses.
+- `dnd`: `{dnd_enabled, next_dnd_start_ts, next_dnd_end_ts, snooze_enabled, snooze_endtime}`, in seconds. In dnd when now is from start to end, or before the snooze ends.
+- `pref_change`: `{name, value}`, the value being what boot has for that name.
+- `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
+- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
+
 ## Not recovered / suggested next step
 
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,

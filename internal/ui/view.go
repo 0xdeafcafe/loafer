@@ -31,6 +31,7 @@ func (m *Model) View() tea.View {
 	v := tea.NewView(out)
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
+	v.ReportFocus = true // to know when the open conversation is worth a notification
 	v.WindowTitle = "loafer"
 	return v
 }
@@ -259,6 +260,9 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	head := []canvas.Row{canvas.Fit(title, w, m.pal.Panel), canvas.Fit(nil, w, ink.Text)}
 
 	box := m.composer(v, c, w, min(6, max(1, h-len(head)-3)))
+	if t := m.typingRow(v, w); t != nil {
+		box = append(t, box...)
+	}
 	listH := max(0, h-len(head)-len(box))
 	list := m.messages(v, c, w, listH)
 	return append(append(head, list...), box...)
