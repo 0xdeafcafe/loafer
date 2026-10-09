@@ -267,7 +267,7 @@ func (m *Model) tabRow(v store.View) canvas.Row {
 	for t, name := range tabNames {
 		st := ink.Dim
 		if tabID(t) == m.tabs.on {
-			st = ink.Sel.With(canvas.Bold)
+			st = ink.Sel.Fg(m.pal.Brand.FG).With(canvas.Bold)
 		}
 		row = append(row, canvas.T(" "+name+" ", st))
 		if l, ok := tabID(t).list(); ok {

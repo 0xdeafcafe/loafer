@@ -14,12 +14,13 @@ type Inks struct {
 
 // Palette is rush's colours, each written as it is on the dark ground and
 // moved onto the terminal's (docs/ui.md, Rules). Main is the message
-// panes' ground; Side is the workspace colour the header, tabs and
-// sidebar sit on.
+// panes' ground; Side is what the header, tabs and sidebar sit on, the
+// same neutral ground now, kept apart so they can differ again.
 type Palette struct {
 	Main, Side                                 Inks
 	Orange, Yellow, Blue, Green, Red, Lavender canvas.Style    // accents on Main
 	NewRule                                    canvas.Style    // the "new" line's rule: orange, half toward the ground
+	Brand                                      canvas.Style    // Slack's aubergine as an accent (plum)
 	SideOrange, SideYellow, SideGreen          canvas.Style    // accents on Side
 	Panel, Input, Chip, Ask, Err               canvas.Style    // surfaces on Main
 	Code                                       [7]canvas.Style // on Panel, by hl.Class
@@ -44,22 +45,18 @@ func inks(g theme.Ground) Inks {
 	}
 }
 
-// sideTint is how far the Side ground goes from the terminal's toward
-// the workspace colour: a hint of aubergine, not Slack's full slab.
-const sideTint = 0.3
+// plum is Slack's aubergine lifted to read as text on rush's dark ground:
+// the brand's accent, for the wordmark, the active tab and the open
+// conversation's marker. It's never a ground.
+var plum = rgb(184, 128, 186)
 
-// NewPalette makes the palette for the terminal's ground and the
-// workspace's colour. The Side ground is the terminal's tinted toward
-// the workspace colour (sideTint); rows on it lift by a step toward its
-// text, as Slack's selected row does.
+// NewPalette makes the palette for the terminal's ground. The sidebar
+// and header sit on the same neutral ground as the messages (Side is
+// Main); Slack's aubergine is only the Brand accent. workspace is kept
+// for the callers' sake and colours nothing now.
 func NewPalette(g theme.Ground, workspace theme.RGB, colorBlind bool) Palette {
-	side := theme.Ground{BG: theme.Mix(g.BG, workspace, sideTint), FG: g.FG}
-	if !side.BG.Dark() {
-		side.FG = theme.Light.FG
-	}
+	side := g
 	p := Palette{Main: inks(g), Side: inks(side)}
-	p.Side.Sel = canvas.Style{}.Bg(theme.Mix(side.BG, side.FG, 0.14)).Fg(side.FG)
-	p.Side.Hover = canvas.Style{}.Bg(theme.Mix(side.BG, side.FG, 0.07)).Fg(side.FG)
 
 	accent := func(gr theme.Ground, c theme.RGB) canvas.Style { return canvas.Style{}.Bg(gr.BG).Fg(gr.Accent(c)) }
 	green, red := rgb(127, 191, 138), rgb(224, 104, 92)
@@ -69,6 +66,7 @@ func NewPalette(g theme.Ground, workspace theme.RGB, colorBlind bool) Palette {
 	p.Orange, p.Yellow, p.Blue = accent(g, rgb(217, 119, 87)), accent(g, rgb(229, 181, 103)), accent(g, rgb(143, 179, 217))
 	p.Green, p.Red, p.Lavender = accent(g, green), accent(g, red), accent(g, rgb(178, 160, 214))
 	p.NewRule = p.Orange.Fg(theme.Mix(p.Orange.FG, g.BG, 0.45))
+	p.Brand = accent(g, plum)
 	p.SideOrange, p.SideYellow, p.SideGreen = accent(side, rgb(217, 119, 87)), accent(side, rgb(229, 181, 103)), accent(side, green)
 
 	text := g.Ink(rgb(226, 221, 211))

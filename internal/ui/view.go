@@ -85,7 +85,7 @@ func (m *Model) header(v store.View) []canvas.Row {
 	// One row (docs/ui.md, Header): who and where on the left, then the
 	// tabs; what wants you and the connection on the right. Narrow, the
 	// counts go first, then the wordmark.
-	brand := canvas.Row{canvas.T(" loafer", ink.Bright.With(canvas.Bold|canvas.Italic)), canvas.T("  "+v.Team().Name, ink.Sub)}
+	brand := canvas.Row{canvas.T(" loafer", m.pal.Brand.With(canvas.Bold|canvas.Italic)), canvas.T("  "+v.Team().Name, ink.Sub)}
 	tabs := append(canvas.Row{canvas.T("    ", ink.Text)}, m.tabRow(v)...)
 	var counts canvas.Row
 	if mentions > 0 {
@@ -114,7 +114,7 @@ func (m *Model) header(v store.View) []canvas.Row {
 		left = append(canvas.Row{canvas.T(" ", ink.Text)}, tabs[1:]...)
 	}
 	rule := canvas.Row{canvas.T(strings.Repeat("─", m.w), m.pal.Main.Faint)}
-	return append(m.washed(v.Team(), rightAlign(left, right, m.w, ink.Text)), rule)
+	return []canvas.Row{rightAlign(left, right, m.w, ink.Text), rule}
 }
 
 // rightAlign puts right at the end of left in w cells, cutting left if
@@ -235,6 +235,9 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 		name = ink.Faint.Bg(base.BG)
 	}
 	mark := canvas.T(" ", base)
+	if open { // the conversation showing: plum, Slack's own, where the cursor isn't
+		mark = canvas.T("▍", base.Fg(m.pal.Brand.FG))
+	}
 	if selected {
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
