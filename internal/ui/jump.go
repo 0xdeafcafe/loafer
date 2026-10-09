@@ -253,7 +253,7 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 		return append(row, canvas.T(" "+strings.Repeat("─", max(0, bw-row.Width()-2))+r, edge))
 	}
 	acting := len(m.bar.query) > 0 && m.bar.query[0] == '>'
-	title, foot := "⌕ Jump", "↑↓ choose · enter go · > actions · # browse · ctrl+f messages · esc close"
+	title, foot := "⌕ Jump", "↑↓ · enter go · > actions · # browse · ctrl+f messages · esc close"
 	if acting {
 		title, foot = "▸ Actions", "↑↓ choose · enter do · esc close"
 	}

@@ -324,12 +324,14 @@ Mentions inside text:
                                         │   ⧉ copy link                 l  │
                                         │   ⧉ copy text                 c  │
                                         │   ↗ open link                 o  │
+                                        │   ↗ open in Slack             L  │
+                                        │   ◉ profile                   p  │
                                         │   ✎ edit                      e  │
                                         │   ✗ delete                    d  │
                                         ╰─ ↑↓ · enter · esc ───────────────╯
 ```
 
-The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, and the thread pane's menu has no reply in thread or mark unread. Delete is red and works as `d d` does: the menu's `d` is the first press.
+The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, download needs files, and the thread pane's menu has no reply in thread or mark unread. Its items are the message actions of the one list of actions (`allActions` in actions.go), which ctrl+k's `>` lists too. Delete is red and works as `d d` does: the menu's `d` is the first press.
 
 - **Copy text and open link** use what's drawn, blocks, rich text, attachments and files included (not the fallback text Slack keeps for notifications), the same renderer laid out wide so nothing wraps. The bars and the code's language tag are left out. Open link takes the first http, https or mailto link in it, a button's included.
 - **Save for later** (`s`) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `s` fetches it. A message with files also lists `download files` (`D`).
@@ -450,6 +452,35 @@ Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter`
   - aligned dim metadata
 - Typing fuzzy-matches channels, people and DMs right away. After a 200 ms pause, it also searches messages, adding a `Messages` section.
 - Slack's filter chips are rush's `barChip`s. `tab` focuses the chip row, and `space` toggles a chip.
+- Empty, the box says `type > for actions, # to browse channels`. A name typed out (`dev`) comes first, then the names it starts (`devops`), ahead of fuzzy hits however unread or recent.
+
+**Actions (`>`)**, as VS Code's and Raycast's command palettes:
+
+```
+                        ╭─ ▸ Actions ──────────────────────────────────────────────────────────╮
+                        │ ❯ >▏                                                                 │
+                        │ ──────────────────────────────────────────────────────────────────── │
+                        │ ▾ Message ────────────────────────────────────────────────────────── │
+                        │ ▍ ☺ react                                                         r  │
+                        │   ↩ reply in thread                                               t  │
+                        │   ◇ ask Claude                                                    a  │
+                        │   ◆ save for later                                                s  │
+                        │   …                                                                  │
+                        │ ▾ Conversation ───────────────────────────────────────────────────── │
+                        │   ▾ fold its section                                              z  │
+                        │   ◌ mute                                                          m  │
+                        │   …                                                                  │
+                        │ ▾ Everywhere ─────────────────────────────────────────────────────── │
+                        │   # browse channels                                               b  │
+                        │   ⌕ search messages                                          ctrl+f  │
+                        │   …                                                                  │
+                        ╰─ ↑↓ choose · enter do · esc close ───────────────────────────────────╯
+```
+
+- `>` as the first thing typed lists every action loafer has, each with its key at the right, from one list (`allActions` in actions.go) that the `.` menu is also drawn from. Typing after it fuzzy-matches their labels, matched letters in orange; `enter` does the chosen one exactly as its key would.
+- **Message**: the `.` menu's, on the message under the cursor (the thread pane's, if it has the focus), labelled as things stand (`unpin`, `remove from later`), and only those that apply. With no message under the cursor they're faint and sink below the rest when typing; `enter` on one says `pick a message first (↑)`.
+- **Conversation**: the sidebar's manage keys (fold, mute or unmute, star, move, leave or close) on the conversation selected in the sidebar, or else the open one.
+- **Everywhere**: browse channels, new message, next that needs you, next unread, back, forward, newest message, search, the tabs, ask Claude about the conversation, switch workspace (only with more than one), the debug strip, profiling, quit. These press their key, so they do whatever it does from where you are.
 
 ## Managing conversations
 
@@ -511,7 +542,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 | key | does |
 |---|---|
-| `ctrl+k` (`/` in the sidebar) | jump to any conversation: what needs you, where you've just been and what's unread first, then fuzzy matching on everything; `#` first browses the channels you're not in. In the composer with text after the cursor, it cuts to the end of the line instead, as in rush |
+| `ctrl+k` (`/` in the sidebar) | jump to any conversation: what needs you, where you've just been and what's unread first, then fuzzy matching on everything, a name typed out first; `>` first lists every action, `#` first browses the channels you're not in. In the composer with text after the cursor, it cuts to the end of the line instead, as in rush |
 | `ctrl+n` | the next conversation that needs you: a mention, or anything new in a DM. The hint line shows `ctrl+n N need you` in yellow while there are any |
 | `ctrl+f` (`/` in the messages) | search messages; see Search below. From ctrl+k, it searches for what's typed there |
 | `alt+↑` `alt+↓` | the conversation above or below in the sidebar |
@@ -539,7 +570,9 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `@` | the previous mention of you (or @here, @channel), wrapping round |
 | `g` `G` | oldest, newest |
 | `e` | edit it, if it's yours |
-| `r` | react: a picker over every emoji, yours and the usual ones first. `enter` adds it, or takes it away if it's already yours (marked ✓) |
+| `r` | react: a grid of every emoji, yours and the usual ones first, then by category (see Emoji below). `enter` adds it, or takes it away if it's already yours |
+| `L` | open it in Slack (its permalink, in the browser) |
+| `p` | the profile card of who wrote it |
 | `1`-`9` | toggle the message's nth reaction, in the order they're drawn |
 | `d d` or `delete delete` | bin it, if it's yours |
 | `.` | the actions menu: everything here, with its key |
@@ -569,7 +602,26 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 On a message with files, `D` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
-**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji are 2-cell pictures where the terminal draws them, in text and reactions alike, and `:name:` in dim elsewhere or until they land. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
+**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji are 2-cell pictures where the terminal draws them, in text and reactions alike, and `:name:` in dim elsewhere or until they land. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. 
+
+**Reaction picker** (`r`):
+
+```
+       ╭─ ☺ React ────────────────────────────────╮
+       │ ❯ ▏search emoji                          │
+       │ ──────────────────────────────────────── │
+       │ Frequently used ──────────────────────── │
+       │ ▍👍  ❤️  😂  🎉  👀  🙌  ✅  🔥  🙏  💯  │
+       │  🚀  🤔                                  │
+       │ Smileys & emotion ────────────────────── │
+       │  😀  😃  😄  😁  😆  😅  🤣  😂  🙂  🙃  │
+       │  …                                       │
+       │ ──────────────────────────────────────── │
+       │ 👍 :+1:                                  │
+       ╰─ ↑↓←→ choose · enter react · esc close ──╯
+```
+
+A grid as Slack's: Frequently used (what you've reacted with this session, then Slack's usual dozen; not kept between runs), then Smileys & emotion, People, Nature, Food & drink, Activities, Travel & places, Objects, Symbols, Flags (iamcal's categories, from `tools/emoji`), then the workspace's Custom ones, drawn as pictures where the terminal draws them and `◌` elsewhere. Typing filters it to what matches, as one unheaded grid. `↑↓←→` move in the grid (`↑↓` keep the column and step over headings), `pgup pgdn` a page, `enter` reacts or un-reacts if it's yours (the bottom line says so), `esc` closes. The bottom line is the emoji under the cursor and its `:name:`. A click on an emoji reacts with it, a click outside closes the picker, and the wheel scrolls the grid. Only the lines on screen are drawn, and the grid is laid out again only when the query or the width changes.
 
 **Search**: a box over the screen, as ctrl+k's is. What's typed goes to Slack a quarter second after you stop, with Slack's modifiers as you type them (`in:#dev`, `from:@drew`, `before:2026-10-01`, `after:`, `is:thread`, `-word`), shown in blue. Opened from a conversation with nothing typed, it searches only there, as Slack's ⌘F does; `tab` switches between there and everywhere. Each result is its conversation, who and when, and a line or two with the matched words in orange (Slack's own marks, else the words you typed); replies say `↩ in a thread`. `↑↓` choose, `pgup pgdn` by five, and nearing the end fetches the next page. `enter` goes there with the cursor on it: at once if it's held, else after fetching the messages around it. A reply puts the cursor on its thread's parent and opens the thread with the cursor on the reply. Going past the newest from there (`↓`, `G`, `esc`) or sending fetches the newest again. `esc` closes it, and it opens again as it was left.
 
