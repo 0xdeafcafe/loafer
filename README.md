@@ -18,6 +18,7 @@ loafer            # open it, signing in first if it needs to
 loafer --demo     # try it on a made-up workspace, no sign-in needed
 loafer login      # sign in again, or to another workspace
 loafer app init   # loafer's own slack app, for phone pushes and shortcuts
+loafer notifyd install   # notifications while it's closed (uninstall, status)
 loafer report     # zip the logs and latest profile for a bug report
 ```
 
@@ -32,7 +33,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **the sidebar**: your sections in slack's order, unread in bold, mentions in yellow.
 - **conversations**: slack's mrkdwn and markdown both, so bots' headings, lists and tables come out as they meant them, and ```go blocks are highlighted (rush's highlighter, 15 or so languages). block kit and slack's rich text draw too, buttons and all, though nothing presses yet. then attachments, files, reactions, threads' reply counts and a line where you'd read up to. drawn from the cache first, so it opens before slack has answered.
 - **keys for everything**: `ctrl+k` jumps anywhere, `ctrl+n` goes to whatever needs you, `alt+←` goes back, and there's a cursor over the messages for editing, binning, copying and opening links. `.` on one lists everything you can do with it (react, reply, save for later, remind me, pin, mark unread, ask claude), each with its key. copying and opening use what's drawn, blocks and attachments too. the full list is in [docs/ui.md](docs/ui.md#keys).
-- **notifications** while it's open, by slack's own rules (dms, mentions, your keywords, your threads; not what's muted, snoozed or in front of you), and a line when someone's typing.
+- **notifications** by slack's own rules (dms, mentions, your keywords, your threads; not what's muted, snoozed or in front of you), and a line when someone's typing. `loafer notifyd install` keeps them coming while it's closed: a small launchd agent holds the websocket and hands it to loafer when you open it, so there's only ever one.
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
 - **dms, activity and later** are tabs along the top (`alt+1` to `alt+5`): your dms newest first with the latest line of each, mentions, replies and reactions to you, and what you saved, overdue in red. `enter` takes you to the message.
 - **live**: messages, edits, deletes, reactions and read state arrive over the same websocket the desktop app uses, and it catches up on what it missed when it drops.
@@ -40,10 +41,11 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **search**: `ctrl+f` searches messages with slack's own modifiers (`in:#dev from:@drew is:thread`), the matched words lit, and `enter` goes to the message, fetching what's around it if it's old.
 - **pictures**: in kitty and ghostty, avatars and images are drawn as pictures, fetched once and kept small on disk. elsewhere it's initials and a `▣ name` line, as before.
 - **threads**: `t` on a message opens its thread beside the conversation (in its place when the terminal's narrow), with its own box, `ctrl+b` to send to the channel too, and replies arriving live.
+- **files**: `ctrl+o` attaches one (a prompt that completes paths), or paste a path, or drop a file on the terminal, and `enter` sends it with the box's words as its comment, with a progress bar and straight from disk. `s` on a message with files saves them to `~/Downloads`, and `O` opens them. slack's size limit is 1 gb a file.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 - **claude**: the last tab asks your own agent through [rush](https://github.com/0xdeafcafe/rush), with the conversation you're in attached: summarise it, draft a reply in your tone, catch you up, or ask anything. `a` on a message asks about it. the answer streams in, follow-ups carry on the same session, and `i` puts the answer in the box as a draft. it never sends for you. without rush the tab says how to get it.
 
-on the way, in this order: block kit buttons and modals, and notifications while it's closed.
+on the way: block kit buttons and modals, and clicking a notification to open it.
 
 ## when it goes wrong
 

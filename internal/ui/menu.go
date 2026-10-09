@@ -53,9 +53,9 @@ func (m *Model) menuList(v store.View) []menuItem {
 	}
 	add("a", "◇", "ask Claude")
 	if v.IsSaved(mn.conv, msg.TS) {
-		add("s", "◆", "remove from later")
+		add("L", "◆", "remove from later")
 	} else {
-		add("s", "◆", "save for later")
+		add("L", "◆", "save for later")
 	}
 	add("m", "◷", "remind me ▸")
 	if slices.Contains(msg.PinnedTo, mn.conv) {
@@ -70,6 +70,9 @@ func (m *Model) menuList(v store.View) []menuItem {
 	add("c", "⧉", "copy text")
 	if mn.link {
 		add("o", "↗", "open link")
+	}
+	if len(downloadable(msg.Files)) > 0 {
+		add("s", "▤", "save files")
 	}
 	if msg.User == v.Self() && msg.Subtype == "" {
 		add("e", "✎", "edit")

@@ -130,7 +130,7 @@ Both looks:
   ↓ 4 more unread           │
                             │ ╭ to #prod-alerts-page ───────────── enter sends · ⇧enter line ╮
                             │ │ ❯ a message for #prod-alerts-page                             │
-                            │ ╰ @ mention · : emoji · ctrl+u file ─────────────── ✎ draft ──╯
+                            │ ╰ @ mention · : emoji · ctrl+o file ─────────────── ✎ draft ──╯
   ↑↓ move · enter open · t thread · . actions · ctrl+k jump
 ```
 
@@ -271,7 +271,7 @@ Mentions inside text:
                                         │ ▍ ☺ react                     r  │
                                         │   ↩ reply in thread           t  │
                                         │   ◇ ask Claude                a  │
-                                        │   ◆ save for later            s  │
+                                        │   ◆ save for later            L  │
                                         │   ◷ remind me ▸               m  │
                                         │   ⚑ pin                       p  │
                                         │   ● mark unread from here     u  │
@@ -286,7 +286,7 @@ Mentions inside text:
 The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, and the thread pane's menu has no reply in thread or mark unread. Delete is red and works as `d d` does: the menu's `d` is the first press.
 
 - **Copy text and open link** use what's drawn, blocks, rich text, attachments and files included (not the fallback text Slack keeps for notifications), the same renderer laid out wide so nothing wraps. The bars and the code's language tag are left out. Open link takes the first http, https or mailto link in it, a button's included.
-- **Save for later** (`s`) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `s` fetches it.
+- **Save for later** (`L`, since `s` saves files, which the menu lists too when there are some) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `L` fetches it.
 - **Remind me** (`m`) is a small chooser: `1` in 20 minutes, `2` in 1 hour, `3` in 3 hours, `4` tomorrow at 9, `5` next week (Monday, at 9), each with its time. It saves the message for later with a due time, as Slack's own "remind me about this" does now, so it shows in Later as due; a message already saved just gets the new time.
 - **Pin** (`p`) pins it for the conversation, or unpins. A pinned message has a dim `⚑ pinned` line under it, and pins from other devices arrive live.
 - **Mark unread from here** (`u`) moves the read marker to the message before it, so it and everything after are unread, in the sidebar too, and the `new` line moves to it. It stays that way (watching new messages arrive doesn't read it) until the conversation is opened again. Not in threads.
@@ -474,7 +474,8 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `.` | the actions menu: everything here, with its key |
 | `c` `l` | copy its text as it's drawn, blocks and attachments included; copy a link to it |
 | `o` | open its first link, as drawn (http, https and mailto only) |
-| `s` | save for later, or take it off Later |
+| `s` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
+| `L` | save for later, or take it off Later |
 | `m` | remind me: in 20 minutes, 1 hour, 3 hours, tomorrow at 9 or next week |
 | `p` | pin it, or unpin it |
 | `u` | mark unread from here |
@@ -489,6 +490,12 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
 
 **Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+
+**Files**: `ctrl+o` in a box (the conversation's or a thread's) opens a prompt for a path, starting at `~/`. It lists what completes it as you type, dotfiles only once you type the dot. `↑↓` choose, `tab` completes (a folder, to look inside it), `enter` attaches what's typed, `esc` closes it. Pasting a path into the prompt works too. A path pasted into an empty box, which is what a terminal types for a file dropped on it (quoted, or with its spaces escaped, or several), asks `attach name?` in the box's top edge: `enter` attaches, any other key declines and the paste goes in as text. That's also what happens when it isn't a file. Attached files sit above the text as chips (`▤ name · size`), and `backspace` at the start of the box takes the last off. Each box has its own.
+
+`enter` sends them, with what's written as their comment (a box of only chips sends too). The box empties, and a bar with a percent stands where the chips were while the file goes up, straight from disk and reported about ten times a second. When it's sent the message comes in over the websocket. One upload goes at a time. In a thread's box it's a reply, and `ctrl+b` sends it to the channel as well. A file past Slack's 1 GB limit, an empty one, or one that isn't a file is refused when you attach it, with the reason. If the upload fails, the chips and the words go back in the box.
+
+On a message with files, `s` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
 **Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 
@@ -514,6 +521,8 @@ The connection state lives in header row 1:
 **Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
 
 It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
+
+**While it's closed.** `loafer notifyd install` writes a LaunchAgent (`~/Library/LaunchAgents/com.github.0xdeafcafe.loafer.notifyd.plist`) and loads it; again, it reloads or restarts it, so a new build takes over. `uninstall` unloads and removes it. `status` says whether launchd has it, and who has the websocket: notifyd, the TUI (notifyd parked), or nobody. notifyd holds the default workspace's websocket with the same rules and the same 3 s bursts, shown through `osascript` only, since it has no terminal. Nothing is ever in front of you, so focus doesn't count. Opening loafer takes the websocket over (notifyd parks it first) and closing it hands it back. Signed out, notifyd says `loafer was signed out; run loafer` once and waits for loafer to have been opened and closed before trying again. Clicking a notification does nothing yet. Its log is `~/Library/Logs/loafer/notifyd.jsonl`.
 
 ## Sizes
 

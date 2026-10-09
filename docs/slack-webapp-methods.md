@@ -283,6 +283,17 @@ UNCERTAIN, not used yet: the web client seems to rank its picker by a `emoji_use
 - Avatars (`users.list` `profile.image_72`, a bot's `bot_profile.icons.image_72`) are on `avatars.slack-edge.com` or `secure.gravatar.com` and get no credentials. The cookie only ever goes over https to `slack.com` and its subdomains, and Go's client drops it on a redirect elsewhere.
 - Image files are sized from `original_w`/`original_h`; image blocks from `image_width`/`image_height`, which are undocumented. Without them a picture takes no room until it lands.
 
+## Files in and out (UNCERTAIN, not tried against a live workspace)
+
+Sending is Slack's current three steps, from its public docs (the desktop app's own upload call wasn't recovered). `slack.Client.Upload` does them in `internal/slack/upload.go`:
+1. `files.getUploadURLExternal` with `filename` and `length` (bytes) gives `upload_url` and `file_id`.
+2. The bytes are POSTed to `upload_url`, raw, with a `Content-Type` of `application/octet-stream` and a `Content-Length`. The URL carries its own authority, so no cookie goes with it, and it isn't logged. The body streams from the file, and the request has no overall timeout, only the context.
+3. `files.completeUploadExternal` with `files` (a JSON array of `{id, title}`, all the files at once), `channel_id`, and optionally `initial_comment` (the text), `thread_ts` and `reply_broadcast` (a thread reply that goes to the channel too, as `ctrl+b` ticks). It returns the files; the message arrives over the websocket as `file_share`, like anyone's.
+
+Unchecked: that the web client's `xoxc-` session token and `d` cookie are taken by these methods as an app's token is, and `reply_broadcast`'s name. The limit is 1 GB a file, which loafer checks before sending. A failure at any step comes back as the usual `ok:false`, or an HTTP status from the upload host, and the files and words go back in the box.
+
+Saving uses `Client.Download`, `Fetch`'s GET (cookie to Slack's hosts only) streamed to disk: `files[].url_private_download`, else `url_private`. As with pictures, whether the cookie alone is enough on `files.slack.com` is unchecked.
+
 ## Not recovered / suggested next step
 
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,
