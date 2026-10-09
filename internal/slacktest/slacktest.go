@@ -43,8 +43,9 @@ type Server struct {
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
-	out      bool   // signed out: every call is invalid_auth and the socket won't open
-	colour   string // the sidebar theme's colour in boot's prefs, if set
+	out      bool  // signed out: every call is invalid_auth and the socket won't open
+
+	colour string // the sidebar theme's colour in boot's prefs, if set
 }
 
 type conv struct {

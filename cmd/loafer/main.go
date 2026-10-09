@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -94,8 +95,9 @@ func main() {
 	exitIf(run())
 }
 
-// run opens the default workspace, signing in first when there's no
-// sign-in to open or Slack has stopped taking it.
+// run opens every signed-in workspace, the newest shown, signing in
+// first when there's none to open or Slack has stopped taking them all.
+// One whose sign-in can't be read is left out.
 func run() error {
 	defer takeOver()()
 	for {
@@ -104,16 +106,24 @@ func run() error {
 			return err
 		}
 		why := "not signed in yet."
-		if len(ws) > 0 {
-			creds, err := slack.Load(ws[0].TeamID)
-			if err == nil {
-				out, err := open(creds)
-				if !out {
-					return err
-				}
-				why = fmt.Sprintf("slack signed you out of %s.", creds.Team)
-			} else {
-				why = fmt.Sprintf("couldn't read %s's sign-in (%v).", ws[0].Team, err)
+		var all []slack.Creds
+		for _, w := range ws {
+			creds, err := slack.Load(w.TeamID)
+			if err != nil {
+				slog.Warn("sign-in", "team", w.TeamID, "err", err)
+				why = fmt.Sprintf("couldn't read %s's sign-in (%v).", w.Team, err)
+				continue
+			}
+			all = append(all, creds)
+		}
+		if len(all) > 0 {
+			out, err := open(all)
+			if !out {
+				return err
+			}
+			why = fmt.Sprintf("slack signed you out of %s.", all[0].Team)
+			if len(all) > 1 {
+				why = "slack signed you out of every workspace."
 			}
 		}
 		fmt.Fprintf(os.Stderr, "%s sign in again, or ctrl+c to stop.\n\n", why)
@@ -123,22 +133,26 @@ func run() error {
 	}
 }
 
-// open draws creds' workspace from the cache at once, then boots it
-// against Slack behind it, and says whether Slack signed it out.
-func open(creds slack.Creds) (bool, error) {
+// open draws each workspace from its cache at once, then boots them
+// against Slack behind it, and says whether Slack signed them all out.
+func open(all []slack.Creds) (bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	st := store.New()
-	path := store.CachePath(creds.TeamID)
-	if err := st.Load(path); err != nil {
-		slog.Warn("cache load", "err", err) // a bad cache only costs a cold start
+	var saved sync.WaitGroup
+	ms := make([]*ui.Model, len(all))
+	for i, creds := range all {
+		st := store.New()
+		path := store.CachePath(creds.TeamID)
+		if err := st.Load(path); err != nil {
+			slog.Warn("cache load", "err", err) // a bad cache only costs a cold start
+		}
+		saved.Go(func() { st.WriteBehind(ctx, path) })
+		ms[i] = ui.New(ctx, st, slack.New(creds))
 	}
-	saved := make(chan struct{})
-	go func() { st.WriteBehind(ctx, path); close(saved) }()
-	m := ui.New(ctx, st, slack.New(creds))
-	_, err := tea.NewProgram(m).Run()
+	x := ui.NewMulti(ms...)
+	_, err := tea.NewProgram(x).Run()
 	cancel()
-	<-saved
-	return err == nil && m.SignedOut(), err
+	saved.Wait()
+	return err == nil && x.SignedOut(), err
 }
 
 func exitIf(err error) {

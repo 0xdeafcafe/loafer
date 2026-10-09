@@ -189,7 +189,7 @@ func (x *Multi) show(to *Model) tea.Cmd {
 	}
 	from := x.ws[x.at]
 	x.at = j
-	from.watch()          // behind now, so its open conversation notifies again
+	from.watch()           // behind now, so its open conversation notifies again
 	to.gate = frame.Gate{} // what it drew last is from before it went behind
 	return tag(j, to.shown())
 }
@@ -261,15 +261,16 @@ func (x *Multi) entry(i int) railEntry {
 				}
 			}
 		})
-		e.initials = initials(m.teamName())
+		e.initials = teamInitials(m.teamName())
 		x.seen[i], x.ents[i] = v, e
 	}
 	return x.ents[i]
 }
 
-// initials are a name's first two words' first letters, or a one-word
-// name's first two letters: "Crumb & Co" is CC, "LangWatch" La.
-func initials(name string) string {
+// teamInitials are a name's first two words' first letters, skipping
+// words like "&", or a one-word name's first two letters: "Crumb & Co"
+// is CC, "LangWatch" La.
+func teamInitials(name string) string {
 	var words [][]rune
 	for f := range strings.FieldsSeq(name) {
 		if r := []rune(f); unicode.IsLetter(r[0]) || unicode.IsDigit(r[0]) {

@@ -71,8 +71,9 @@ type Model struct {
 
 	al     alerts // notifications and the typing line (alerts.go)
 	claude claude // the Claude tab (claude.go)
-	ws     *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
-	wash   washCache // the header's wash (wash.go)
+
+	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
+	wash washCache // the header's wash (wash.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
