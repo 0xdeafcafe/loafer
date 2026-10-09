@@ -43,7 +43,7 @@ type Store struct {
 	booted atomic.Bool // a boot has got through
 	done   uint32      // Boot's steps finished, failed or not (progress.go)
 	failed uint32
-	al     alertState  // notification rules and typing (alert.go)
+	al     alertState // notification rules and typing (alert.go)
 
 	version atomic.Uint64
 	changed chan struct{}

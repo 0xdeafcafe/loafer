@@ -47,7 +47,7 @@ type Server struct {
 	last     int64 // the newest ts handed out, in microseconds
 	folk     folk  // presence, user groups (people.go)
 	files    map[string]*file
-	out      bool // signed out: every call is invalid_auth and the socket won't open
+	out      bool                     // signed out: every call is invalid_auth and the socket won't open
 	holds    map[string]chan struct{} // methods whose answers wait (hold.go)
 }
 
