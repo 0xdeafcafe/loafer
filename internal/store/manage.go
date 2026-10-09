@@ -93,18 +93,18 @@ func (s *Store) Move(conv, to string) (from string, ok bool) {
 
 // place is Move with the lock held.
 func (s *Store) place(conv, to string) (from string, ok bool) {
-	ok = to == ""
+	if to != "" && !slices.ContainsFunc(s.sections, func(x Section) bool { return x.ID == to }) {
+		return "", false // nothing moves
+	}
+	ok = true
 	for i := range s.sections {
 		sec := &s.sections[i]
 		if j := slices.Index(sec.Convs, conv); j >= 0 {
 			from = sec.ID
 			sec.Convs = slices.Delete(slices.Clone(sec.Convs), j, j+1)
 		}
-		if sec.ID == to {
-			ok = true
-			if !catchAll(sec.Type) {
-				sec.Convs = append(slices.Clone(sec.Convs), conv)
-			}
+		if sec.ID == to && !catchAll(sec.Type) {
+			sec.Convs = append(slices.Clone(sec.Convs), conv)
 		}
 	}
 	return from, ok

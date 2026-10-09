@@ -42,6 +42,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **pictures**: in kitty and ghostty, avatars and images are drawn as pictures, fetched once and kept small on disk. elsewhere it's initials and a `▣ name` line, as before.
 - **threads**: `t` on a message opens its thread beside the conversation (in its place when the terminal's narrow), with its own box, `ctrl+b` to send to the channel too, and replies arriving live.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
+- **managing the sidebar**: `b` (or `#` in `ctrl+k`) browses the channels you're not in and reads one before you join it, `N` starts a dm or group dm, `z` folds a section (what's unread stays showing), `m` mutes, `*` stars, `s` moves a conversation to another section and `x` leaves a channel or closes a dm. muted ones go faint and out of `ctrl+n`. the section calls are guesses at slack's, so check them.
 - **claude**: the last tab asks your own agent through [rush](https://github.com/0xdeafcafe/rush), with the conversation you're in attached: summarise it, draft a reply in your tone, catch you up, or ask anything. `a` on a message asks about it. the answer streams in, follow-ups carry on the same session, and `i` puts the answer in the box as a draft. it never sends for you. without rush the tab says how to get it.
 
 on the way: block kit buttons and modals, and clicking a notification to open it.
