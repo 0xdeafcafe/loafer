@@ -237,7 +237,7 @@ func (m *Model) goTo(x slack.Match) tea.Cmd {
 }
 
 // land puts the message cursor on ts. A reply's search lands on its
-// parent; the thread pane opens on the reply here once there is one.
+// parent, and opens the thread pane on the reply.
 func (m *Model) land(conv, ts, reply string) tea.Cmd {
 	held := false
 	m.st.Read(func(v store.View) { held = v.Holds(conv, ts) })
@@ -245,7 +245,9 @@ func (m *Model) land(conv, ts, reply string) tea.Cmd {
 		return m.say("that message has gone", false)
 	}
 	m.focus, m.sel, m.follow = onMsgs, ts, true
-	_ = reply // threads: open the thread at reply here
+	if reply != "" {
+		return m.openReply(ts, reply)
+	}
 	return nil
 }
 

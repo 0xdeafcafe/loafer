@@ -106,10 +106,11 @@ func TestSearch(t *testing.T) {
 		t.Fatalf("tab: here %q sent %q", m.find.here, m.find.sent)
 	}
 
-	// A reply lands on its parent, which #dev holds: at once.
+	// A reply lands on its parent, which #dev holds, at once, and opens
+	// the thread on the reply.
 	press(m, tea.KeyPressMsg{Code: tea.KeyEnter})
-	if m.find.on || m.focus != onMsgs || m.sel != parent {
-		t.Fatalf("enter on a reply: on %v focus %v sel %q", m.find.on, m.focus, m.sel)
+	if m.find.on || m.focus != onThread || m.th.ts != parent || m.th.sel != "9.0" {
+		t.Fatalf("enter on a reply: on %v focus %v thread %q sel %q", m.find.on, m.focus, m.th.ts, m.th.sel)
 	}
 
 	// Closed and opened again, it's as it was.

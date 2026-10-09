@@ -121,6 +121,7 @@ func (s *Store) Apply(ev slack.Event) {
 				if w, i := s.held(e.Channel, e.Message.TS); i >= 0 {
 					w.Msgs[i] = e.Message
 				}
+				s.threadSet(e.Channel, e.Message)
 			})
 		case "message_deleted":
 			s.Remove(e.Channel, e.DeletedTS)
@@ -149,6 +150,9 @@ func (s *Store) Apply(ev slack.Event) {
 				m := &w.Msgs[i]
 				m.Reactions = react(m.Reactions, e.Reaction, e.User, ev.Type == "reaction_added")
 			}
+			s.inThreads(e.Item.Channel, e.Item.TS, func(m *slack.Message) {
+				m.Reactions = react(m.Reactions, e.Reaction, e.User, ev.Type == "reaction_added")
+			})
 		})
 
 	case "channel_marked", "group_marked", "im_marked", "mpim_marked":
@@ -212,7 +216,8 @@ func (s *Store) Apply(ev slack.Event) {
 // whichever comes first: the second replaces the first.
 func (s *Store) Add(conv string, m slack.Message) {
 	s.update(func() {
-		// A reply goes to its thread, which isn't held: its parent only
+		s.threadAdd(conv, m)
+		// A reply goes to its thread, if that's held, and its parent here
 		// counts it. message_replied brings the parent's own count after.
 		if m.ThreadTS != "" && m.ThreadTS != m.TS && m.Subtype != "thread_broadcast" {
 			if w, i := s.held(conv, m.ThreadTS); i >= 0 && w.Msgs[i].LatestReply < m.TS {

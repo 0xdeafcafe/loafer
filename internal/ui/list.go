@@ -134,7 +134,7 @@ func (m *Model) messages(v store.View, c *store.Conv, w, h int) []canvas.Row {
 		}
 		return out
 	}
-	win := v.Window(c.ID)
+	win := m.window(v)
 	if win == nil || len(win.Msgs) == 0 {
 		note := "  loading…"
 		if win != nil {

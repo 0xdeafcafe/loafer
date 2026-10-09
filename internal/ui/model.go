@@ -28,6 +28,8 @@ const (
 	onSide focus = iota
 	onMsgs
 	onCompose
+	onThread // the thread pane's messages
+	onReply  // the thread pane's box
 )
 
 type Model struct {
@@ -56,6 +58,7 @@ type Model struct {
 	bar       jumper   // ctrl+k
 	emo       emojiUI  // the reaction picker and :sm popup
 	find      finder   // ctrl+f
+	th        threadPane
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -138,6 +141,7 @@ func (m *Model) listen() tea.Cmd {
 // openConv shows conversation id, keeping what was being written in the
 // one left. visit is the way in that remembers where you've been.
 func (m *Model) openConv(id string) tea.Cmd {
+	m.dropThread()
 	if m.editing != "" {
 		m.cancelEdit()
 	}
@@ -203,6 +207,9 @@ func (m *Model) send() tea.Cmd {
 			return sentMsg{err}
 		}
 	}
+	if m.th.in {
+		return m.reply(conv, text)
+	}
 	return func() tea.Msg {
 		msg, err := m.api.Post(m.ctx, conv, text, "")
 		if err == nil {
@@ -253,7 +260,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
 		}
-		return m, tea.Batch(cmd, m.watchTyping())
+		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
 	case bootedMsg:
 		switch {
 		case msg.err == nil:
@@ -298,6 +305,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case searchTickMsg, searchedMsg, foundMsg:
 		return m, m.searched(msg)
+	case threadMsg:
+		return m, m.threaded(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
 		return m, m.alert(msg)
 	case flashOffMsg:
@@ -319,6 +328,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
 			m.refreshPop()
+		} else if m.focus == onReply {
+			m.inThread(func() { m.insert(msg.Content); m.refreshPop() })
 		}
 	case tea.MouseWheelMsg:
 		if msg.Button == tea.MouseWheelUp {
@@ -376,10 +387,10 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		}
 		return m.say("already profiling", false)
 	case "tab":
-		m.setFocus((m.focus + 1) % 3)
+		m.setFocus(m.next(1))
 		return nil
 	case "shift+tab":
-		m.setFocus((m.focus + 2) % 3)
+		m.setFocus(m.next(-1))
 		return nil
 	case "alt+up":
 		return m.jump(-1, anyConv, "")
@@ -413,6 +424,8 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.sideKey(s)
 	case onMsgs:
 		return m.msgsKey(s)
+	case onThread, onReply:
+		return m.threadKey(k, s)
 	}
 	cmd := m.composeKey(k, s)
 	m.refreshPop()
@@ -422,6 +435,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 // setFocus moves focus to f; the message cursor starts on the newest
 // message, and goes when focus leaves.
 func (m *Model) setFocus(f focus) {
+	m.threadFocus(f)
 	if f == onMsgs && m.focus != onMsgs && m.sel == "" { // after an edit, stay on what was edited
 		m.pick(by(-1))
 	}
@@ -515,7 +529,9 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 			return m.pick(newest)
 		}
 		m.setFocus(onSide)
-	case "i", "a", "enter":
+	case "t", "right", "enter":
+		return m.threadAt(s)
+	case "i", "a":
 		m.setFocus(onCompose)
 	}
 	return nil

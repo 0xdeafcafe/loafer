@@ -56,7 +56,7 @@ func (m *Model) render() []canvas.Row {
 		for i := range div {
 			div[i] = canvas.Row{canvas.T("│", m.pal.Main.Faint)}
 		}
-		out = append(out, canvas.Join(side, div, m.main(v, m.w-sw-1, bodyH))...)
+		out = append(out, canvas.Join(side, div, m.panes(v, m.w-sw-1, bodyH))...)
 		out = append(out, m.hints(v))
 		if m.bar.on {
 			out = m.overlayJump(v, out)
@@ -334,6 +334,9 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 		top = label("editing your message", "enter saves · esc cancels", "╭", "╮")
 	}
 	bottom := label("", "", "╰", "╯")
+	if m.th.in && m.editing == "" {
+		top, bottom = label("reply in thread", m.also(v, c), "╭", "╮"), label("ctrl+b also send to channel", "", "╰", "╯")
+	}
 
 	inner := max(4, w-6) // "│ ❯ " … " │"
 	field := m.pal.Input
@@ -342,7 +345,7 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 		if m.focus == onCompose {
 			text = canvas.Row{canvas.T(" ", field.Bg(ink.Text.FG))}
 		}
-		text = append(text, canvas.T("a message for "+convLabel(v, c), field.Fg(ink.Faint.FG)))
+		text = append(text, canvas.T(m.placeholder(v, c), field.Fg(ink.Faint.FG)))
 	} else {
 		text = m.inputRow(field, field.Fg(m.pal.Blue.FG), field.Bg(ink.Text.FG).Fg(field.BG), m.focus == onCompose)
 	}
@@ -405,10 +408,12 @@ func (m *Model) hints(v store.View) canvas.Row {
 	}
 	var pairs [][2]string
 	switch {
+	case m.focus >= onThread:
+		pairs = m.threadHints()
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":

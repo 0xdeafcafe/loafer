@@ -110,7 +110,7 @@ func msgIndex(msgs []slack.Message, ts string) int {
 func (m *Model) pick(f func(msgs []slack.Message, at int) int) tea.Cmd {
 	var cmd tea.Cmd
 	m.st.Read(func(v store.View) {
-		w := v.Window(m.open)
+		w := m.window(v)
 		if w == nil {
 			return
 		}
@@ -213,7 +213,7 @@ func (m *Model) toNew() tea.Cmd {
 // selected is the message under the cursor.
 func (m *Model) selected() (msg slack.Message, ok bool) {
 	m.st.Read(func(v store.View) {
-		if w := v.Window(m.open); w != nil && m.sel != "" {
+		if w := m.window(v); w != nil && m.sel != "" {
 			if i := msgIndex(w.Msgs, m.sel); i < len(w.Msgs) && w.Msgs[i].TS == m.sel {
 				msg, ok = w.Msgs[i], true
 			}
@@ -225,7 +225,7 @@ func (m *Model) selected() (msg slack.Message, ok bool) {
 // lastOwn is your newest message in the open conversation.
 func (m *Model) lastOwn() (msg slack.Message, ok bool) {
 	m.st.Read(func(v store.View) {
-		if w := v.Window(m.open); w != nil {
+		if w := m.window(v); w != nil {
 			for i := len(w.Msgs) - 1; i >= 0; i-- {
 				if w.Msgs[i].User == v.Self() && w.Msgs[i].Subtype == "" {
 					msg, ok = w.Msgs[i], true
@@ -330,7 +330,11 @@ func (m *Model) copyText(msg slack.Message) tea.Cmd {
 func (m *Model) permalink(msg slack.Message) string {
 	var domain string
 	m.st.Read(func(v store.View) { domain = v.Team().Domain })
-	return "https://" + domain + ".slack.com/archives/" + m.open + "/p" + strings.Replace(msg.TS, ".", "", 1)
+	link := "https://" + domain + ".slack.com/archives/" + m.open + "/p" + strings.Replace(msg.TS, ".", "", 1)
+	if msg.ThreadTS != "" && msg.ThreadTS != msg.TS {
+		link += "?thread_ts=" + msg.ThreadTS + "&cid=" + m.open // a reply's, as Slack makes them
+	}
+	return link
 }
 
 // openLink opens the first web link in msg in the browser. Only http,

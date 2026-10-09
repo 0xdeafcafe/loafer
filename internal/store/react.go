@@ -3,6 +3,8 @@ package store
 import (
 	"maps"
 	"slices"
+
+	"github.com/0xdeafcafe/loafer/internal/slack"
 )
 
 // React adds or takes away your own reaction name on the message at ts
@@ -13,6 +15,7 @@ func (s *Store) React(conv, ts, name string, add bool) {
 			m := &w.Msgs[i]
 			m.Reactions = react(m.Reactions, name, s.self, add)
 		}
+		s.inThreads(conv, ts, func(m *slack.Message) { m.Reactions = react(m.Reactions, name, s.self, add) })
 	})
 }
 

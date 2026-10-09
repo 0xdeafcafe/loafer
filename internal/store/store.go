@@ -30,6 +30,7 @@ type Store struct {
 	sections []Section
 	emoji    map[string]string
 	windows  map[string]*Window
+	threads  map[string]*Window // the threads looked at lately (thread.go)
 	clock    uint64
 	names    uint64 // goes up when people or emoji change, which drawn messages show
 	link     string // the websocket: connecting, live or offline; "" before it's tried
@@ -321,6 +322,7 @@ func (s *Store) Edit(conv, ts, text string) {
 		if w, i := s.held(conv, ts); i >= 0 {
 			w.Msgs[i].Text, w.Msgs[i].Edited = text, &struct{}{}
 		}
+		s.inThreads(conv, ts, func(m *slack.Message) { m.Text, m.Edited = text, &struct{}{} })
 	})
 }
 
@@ -330,5 +332,6 @@ func (s *Store) Remove(conv, ts string) {
 		if w, i := s.held(conv, ts); i >= 0 {
 			w.Msgs = slices.Delete(w.Msgs, i, i+1)
 		}
+		s.threadRemove(conv, ts)
 	})
 }

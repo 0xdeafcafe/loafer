@@ -208,6 +208,11 @@ Fetchers FOUND (`conversations.history`, `.replies`, `.historyChanges`, `.view`,
 is not in this cache except the boot one above (`ignore_replies:!0`, `include_stories`, `include_mutation_timestamps`, `no_members`, `canonical_avatars`).
 `include_pin_count`: NOT FOUND. Replies thunk uses `{channelId,threadTs,oldest,latest,limit}` and pages both directions, returning `{msgs,hasMore,deleted}`.
 
+What loafer sends for threads (`internal/slack/thread.go`), none of it yet checked against a DevTools capture:
+- `conversations.replies` with the public API's `channel`, `ts`, `limit=200` and `cursor` from `response_metadata.next_cursor`. Whether a later page leads with the parent again is UNCERTAIN, so it's dropped if it does. It stops at 1000 messages.
+- replies go by `chat.postMessage` with `thread_ts`, and `reply_broadcast=true` for "also send to the channel". That the returned message carries `subtype: thread_broadcast` is assumed; if it doesn't, the channel's copy comes down the websocket instead.
+- `subscriptions.thread.mark` with `channel`, `thread_ts`, `ts`, `read=1`: wee-slack's keys (slack-internal-api.md §5), not the web client's, whose wire keys are NOT FOUND (§3 above). A failure is only logged.
+
 Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/richtext.go`), from Slack's public Block Kit docs, not from a trace:
 - `blocks[]`, each decoded on its own so one unknown block costs only itself. `rich_text` parts: `rich_text_section/list/preformatted/quote`;
   inline `text` (with `style.bold/italic/strike/code`), `link`, `user`, `channel`, `usergroup`, `broadcast`, `emoji` (with `unicode`), `date`, `color`.
