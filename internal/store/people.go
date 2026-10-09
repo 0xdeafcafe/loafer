@@ -7,3 +7,10 @@ func (v View) EachPerson(f func(*Person)) {
 		f(p)
 	}
 }
+
+// EachConv calls f with every conversation held, in no order.
+func (v View) EachConv(f func(*Conv)) {
+	for _, c := range v.s.convs {
+		f(c)
+	}
+}

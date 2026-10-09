@@ -44,6 +44,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **files**: `ctrl+o` attaches one (a prompt that completes paths), or paste a path, or drop a file on the terminal, and `enter` sends it with the box's words as its comment, with a progress bar and straight from disk. `D` on a message with files saves them to `~/Downloads`, and `O` opens them. slack's size limit is 1 gb a file.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 - **claude**: the last tab asks your own agent through [rush](https://github.com/0xdeafcafe/rush), with the conversation you're in attached: summarise it, draft a reply in your tone, catch you up, or ask anything. `a` on a message asks about it. the answer streams in, follow-ups carry on the same session, and `i` puts the answer in the box as a draft. it never sends for you. without rush the tab says how to get it.
+- **slack for your agents**: as a rush plugin, your agents can search, read, see what's unread and look people up, and leave drafts in loafer's box. none of it sends. [docs/rush-plugin.md](docs/rush-plugin.md) says how to install it.
 
 on the way: block kit buttons and modals, and clicking a notification to open it.
 

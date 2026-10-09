@@ -331,6 +331,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
 		return m, m.alert(msg)
+	case Draft:
+		return m, m.takeDraft(msg)
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""
