@@ -96,6 +96,44 @@ Both looks:
 - **Narrow terminals.** Under 100 columns the logo is dropped and only the wordmark shows.
 - **Notifier icon.** The notifier app's icon is the bands shoe, rendered as a PNG.
 
+## Welcome
+
+The first frame normally comes from the cache. When there's none (the first run, or a workspace just signed in to with `loafer login`) there's nothing to draw yet, and a big workspace's boot takes a while, so loafer shows this instead, on the workspace's aubergine:
+
+```
+                                ▄▄▄
+                          ▄██▄▄▀▀▀▀▀▀▄▄▄
+                          ████████████████▄▄
+                          ████▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+                        welcome to loafer, sam
+      Crumb & Co is new to loafer, so it's fetching it all once.
+          next time it opens from the cache, straight away.
+
+               ✓ signed in
+               ✓ the workspace         9 conversations
+               ◌ people                1,500 so far
+               ✓ channels and sections
+               ✓ unread counts
+               ◌ emoji
+
+             ctrl+k   jump to anything
+             ctrl+n   the next thing that needs you
+             tab      sidebar, messages, the box
+             alt+1…5  home, dms, activity, later, claude
+             .        all you can do with a message
+
+               any key to start · the rest keeps coming
+```
+
+- **The logo** is the bands shoe, drawn in with `lace` (18 frames at 60 ms) and then still. That's the only timer it has.
+- **The steps** are boot's own (`store.Progress`), ticked as each call answers: `client.userBoot`, `users.list` (counting people page by page), `users.channelSections.list`, `client.counts` (which waits for boot, so it's `·` until then) and `emoji.list`. `◌` is under way, `✓` done, `✗` failed. One that fails and isn't needed says `couldn't, carrying on`; boot and counts say `not yet, trying again`, and the footer says slack couldn't be reached, while the socket keeps trying and boots again once it gets through. Your name appears once boot knows it.
+- **When it goes**: once every step has answered, the app comes up with the first conversation open. Once the sidebar can draw (boot, counts and sections in), `any key` goes straight there and the rest keeps arriving behind it; before that, keys do nothing but `ctrl+c`. Pictures and custom emoji images never hold it up.
+- **Signed out**: `✗ slack signed you out · any key to sign in again`, and a key goes back to the sign-in, as the app would.
+- **Drawn** only when something it shows changes (a step, a count, the size, the ground, a frame of the logo), and kept otherwise.
+- **Sizes**: it's centred. Short of room it puts the keys on one line (`ctrl+k jump · ctrl+n what needs you · tab move`), then drops the logo, then the intro, then the keys.
+- **A warm cache never shows it.** To see it anyway, `LOAFER_WELCOME=1 loafer` shows it on any start and waits for a key once ready, and `LOAFER_WELCOME=1 loafer --demo` does the same on the made-up workspace, whose fake Slack is slowed to answer over about four seconds so the steps can be watched.
+
 ## Main screen (Home, channel open, thread closed)
 
 ```

@@ -78,6 +78,7 @@ type Model struct {
 	al     alerts  // notifications and the typing line (alerts.go)
 	claude claude  // the Claude tab (claude.go)
 	acts   actions // the . menu and what it does (actions.go)
+	wel    welcome // the cold start's welcome (welcome.go)
 
 	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
 	wash washCache // the header's wash (wash.go)
@@ -128,7 +129,7 @@ type (
 )
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot(), m.startPics())
+	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot(), m.startPics(), m.welcomeInit())
 }
 
 func (m *Model) waitStore() tea.Cmd {
@@ -256,6 +257,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	defer m.stalled(time.Now(), msg)
+	if cmd, ok := m.onWelcome(msg); ok {
+		return m, cmd
+	}
 	if cmd, ok := m.onPics(msg); ok {
 		return m, cmd
 	}

@@ -9,18 +9,13 @@ it's its own binary, not `loafer rush-plugin`. rush records every file in a plug
 ## install
 
 ```sh
-go install github.com/0xdeafcafe/loafer/cmd/loafer@latest   # loafer draft needs it
-mkdir -p ~/.config/rush/plugins/loafer
-go build -o ~/.config/rush/plugins/loafer/loafer-rush ./cmd/loafer-rush
-cp cmd/loafer-rush/plugin.json ~/.config/rush/plugins/loafer/
+go install github.com/0xdeafcafe/loafer/cmd/loafer@latest github.com/0xdeafcafe/loafer/cmd/loafer-rush@latest
+loafer rush install
 ```
 
+`loafer rush install` copies `loafer-rush` (from beside `loafer`) into rush's plugin folder (`rush plugin dir`), with its manifest (`internal/rushlink/plugin.json`) made to reach only your first workspace's host and to run the `loafer` it was run as, then has rush ask you to approve it. Opening loafer offers to do this once, when rush is on the PATH and the plugin isn't installed.
+
 on apple silicon, build with `GOARCH=arm64` if `go env GOARCH` says `amd64`: the sandbox blocks rosetta.
-
-then change two lines of `~/.config/rush/plugins/loafer/plugin.json`:
-
-- `network`: your workspace's host, as loafer signed in to it, e.g. `"acme.slack.com:443"`. it's the only host the plugin can reach.
-- `exec.loafer`: where `loafer` is, if not `~/go/bin/loafer`.
 
 it uses loafer's first workspace, the one `loafer` opens. you need to have run `loafer login`.
 
