@@ -94,9 +94,9 @@ func picSeg(p images.Pic, r int) canvas.Seg {
 	return canvas.Seg{Text: p.Cells[r], St: canvas.Style{}.Fg(id), W: p.Cols}
 }
 
-// face is the avatar on a message's first row, 2 cells by 1, once it's
-// landed; else ok is false and the initials stay.
-func face(v store.View, m *slack.Message) (canvas.Seg, bool) {
+// face is a message's avatar, fitted into avatarW by avatarH cells, once
+// it's landed; else ok is false and the initials stay.
+func face(v store.View, m *slack.Message) (images.Pic, bool) {
 	url := ""
 	if m.User != "" {
 		url = v.Person(m.User).Avatar
@@ -104,11 +104,8 @@ func face(v store.View, m *slack.Message) (canvas.Seg, bool) {
 	if url == "" && m.BotProfile != nil {
 		url = cmp.Or(m.BotProfile.Icons.Image72, m.BotProfile.Icons.Image48)
 	}
-	p, ok := picture(url, 2, 1)
-	if !ok || p.Cols != 2 || p.Rows != 1 {
-		return canvas.Seg{}, false
-	}
-	return picSeg(p, 0), true
+	p, ok := picture(url, avatarW, avatarH)
+	return p, ok && p.OK()
 }
 
 // inlinePic is a context block's image as a picture a row high, once it's landed.

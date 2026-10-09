@@ -14,16 +14,20 @@ import (
 
 // A message is drawn as (docs/ui.md, Main screen):
 //
-//	██ Name  app  21:49
-//	██ body, wrapped at the pane less the gutter
-//	   ▌ attachment, behind a bar in its colour
-//	   👍 1  ☺+          reactions
-//	   ↩ 4 replies · last 16:47
+//	████ Name  app  21:49
+//	████ body, wrapped at the pane less the gutter
+//	     ▌ attachment, behind a bar in its colour
+//	     👍 1  ☺+          reactions
+//	     ↩ 4 replies · last 16:47
 //
-// The avatar is 2×2 cells; a follow-up from the same author within five
-// minutes has no header and no avatar.
+// The avatar is avatarW×avatarH cells, a picture or initials on a tint
+// alike, beside the name and the first line; a follow-up from the same
+// author within five minutes has no header and no avatar.
 
-const gutter = 3 // avatar (2) and a space
+const (
+	avatarW, avatarH = 4, 2 // about square: a cell is twice as tall as wide
+	gutter           = avatarW + 1
+)
 
 // tsTime reads a Slack ts ("1696789123.000200").
 func tsTime(ts string) time.Time {
@@ -88,16 +92,10 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 	pad := canvas.T(strings.Repeat(" ", gutter), ink.Text)
 
 	name, app := author(v, m)
-	chin := canvas.T("  ", canvas.Style{}.Bg(tint(m.User+m.BotID+m.Username))) // the initials' second row
+	var av [avatarH]canvas.Row
 	if header {
-		av := canvas.Style{}.Bg(tint(m.User + m.BotID + m.Username)).Fg(rgb(240, 236, 228)).With(canvas.Bold)
-		f, pic := face(v, m)
-		if !pic {
-			f = canvas.T(initials(name), av)
-		} else {
-			chin = canvas.T("  ", ink.Text)
-		}
-		head := canvas.Row{f, canvas.T(" ", ink.Text), canvas.T(name, ink.Bright.With(canvas.Bold))}
+		av = avatar(p, v, m, name)
+		head := append(av[0], canvas.T(" ", ink.Text), canvas.T(name, ink.Bright.With(canvas.Bold)))
 		if g := statusGlyph(v, m.User); g != "" {
 			head = append(head, canvas.T(" "+g, ink.Text))
 		}
@@ -133,16 +131,39 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 	}
 
 	for i, r := range body {
-		lead := pad
-		if header && i == 0 {
-			// The avatar's second row sits beside the first line.
-			rows = append(rows, append(canvas.Row{chin, canvas.T(" ", ink.Text)}, r...))
+		if header && i+1 < avatarH {
+			// The avatar's lower rows sit beside the first lines.
+			rows = append(rows, append(append(av[i+1], canvas.T(" ", ink.Text)), r...))
 			continue
 		}
-		rows = append(rows, append(canvas.Row{lead}, r...))
+		rows = append(rows, append(canvas.Row{pad}, r...))
 	}
-	if header && len(body) == 0 {
-		rows = append(rows, canvas.Row{chin})
+	for i := len(body) + 1; header && i < avatarH; i++ {
+		rows = append(rows, av[i])
+	}
+	return rows
+}
+
+// avatar is m's avatar as avatarH rows each avatarW wide: its picture,
+// centred, where it's landed; else its initials, bold on its tint, as
+// Slack's letter avatars are.
+func avatar(p *Palette, v store.View, m *slack.Message, name string) (rows [avatarH]canvas.Row) {
+	ground := p.Main.Text
+	if pic, ok := face(v, m); ok {
+		l := (avatarW - pic.Cols) / 2
+		for r := range rows {
+			if r < pic.Rows {
+				rows[r] = canvas.Row{canvas.T(strings.Repeat(" ", l), ground), picSeg(pic, r), canvas.T(strings.Repeat(" ", avatarW-l-pic.Cols), ground)}
+			} else {
+				rows[r] = canvas.Row{canvas.T(strings.Repeat(" ", avatarW), ground)}
+			}
+		}
+		return rows
+	}
+	tile := canvas.Style{}.Bg(tint(m.User + m.BotID + m.Username)).Fg(rgb(240, 236, 228))
+	rows[0] = canvas.Fit(canvas.Row{canvas.T(" "+initials(name), tile.With(canvas.Bold))}, avatarW, tile)
+	for r := 1; r < avatarH; r++ {
+		rows[r] = canvas.Row{canvas.T(strings.Repeat(" ", avatarW), tile)}
 	}
 	return rows
 }

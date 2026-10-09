@@ -19,6 +19,7 @@ type Inks struct {
 type Palette struct {
 	Main, Side                                 Inks
 	Orange, Yellow, Blue, Green, Red, Lavender canvas.Style    // accents on Main
+	NewRule                                    canvas.Style    // the "new" line's rule: orange, half toward the ground
 	SideOrange, SideYellow, SideGreen          canvas.Style    // accents on Side
 	Panel, Input, Chip, Ask, Err               canvas.Style    // surfaces on Main
 	Code                                       [7]canvas.Style // on Panel, by hl.Class
@@ -67,6 +68,7 @@ func NewPalette(g theme.Ground, workspace theme.RGB, colorBlind bool) Palette {
 	}
 	p.Orange, p.Yellow, p.Blue = accent(g, rgb(217, 119, 87)), accent(g, rgb(229, 181, 103)), accent(g, rgb(143, 179, 217))
 	p.Green, p.Red, p.Lavender = accent(g, green), accent(g, red), accent(g, rgb(178, 160, 214))
+	p.NewRule = p.Orange.Fg(theme.Mix(p.Orange.FG, g.BG, 0.45))
 	p.SideOrange, p.SideYellow, p.SideGreen = accent(side, rgb(217, 119, 87)), accent(side, rgb(229, 181, 103)), accent(side, green)
 
 	text := g.Ink(rgb(226, 221, 211))
