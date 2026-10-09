@@ -53,6 +53,7 @@ func (m *Model) render() []canvas.Row {
 		out = append(out, m.header(v)...)
 		bodyH := m.h - headerH - 1
 		sw, side := m.left(v, bodyH)
+		m.hov.x, m.hov.w = sw+1, 0 // main says where its list is, when it has one
 		out = append(out, m.join(side, m.panes(v, m.w-sw-1, bodyH), bodyH)...)
 		out = append(out, m.hints(v))
 		if m.bar.on {
@@ -297,6 +298,7 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 		box = append(t, box...)
 	}
 	listH := max(0, h-len(head)-len(box))
+	m.hov.y, m.hov.w = headerH+len(head), w
 	list := m.overlayPop(m.newerPill(v, c, m.messages(v, c, w, listH), w), w)
 	return append(append(head, list...), box...)
 }

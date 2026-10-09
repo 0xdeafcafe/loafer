@@ -80,7 +80,7 @@ type Model struct {
 	acts   actions // the . menu and what it does (actions.go)
 	wel    welcome // the cold start's welcome (welcome.go)
 
-	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
+	ws *wsSlot // its place among several workspaces (workspaces.go); nil when it's the only one
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -90,6 +90,7 @@ type Model struct {
 	drawn     *rows.Cache[rowKey, []canvas.Row] // messages as drawn
 	pix       picState                          // which of them wait on a picture (picture.go)
 	heights   map[string]int                    // each drawn message's rows, by ts
+	hov       hoverUI                           // the message under the pointer (hover.go)
 	index     rows.Index                        // the open window's messages' rows
 	indexOf   indexKey
 	rowsW     int
@@ -346,6 +347,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case askedMsg, claudeMsg, caughtUpMsg, rushDoneMsg:
 		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
+		if _, blur := msg.(tea.BlurMsg); blur {
+			m.hov.ts = ""
+		}
 		cmd := m.alert(msg)
 		if _, back := msg.(tea.FocusMsg); back {
 			cmd = tea.Batch(cmd, m.readIfWatching())
@@ -387,6 +391,12 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.MouseWheelMsg:
 		m.wheel(msg)
+	case tea.MouseMotionMsg:
+		if !m.hoverAt(msg.X, msg.Y) {
+			m.gate.Keep() // still the same message: nothing to draw
+		}
+	case tea.MouseClickMsg:
+		return m, m.click(msg)
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
 	default:
