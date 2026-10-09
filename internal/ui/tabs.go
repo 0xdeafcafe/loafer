@@ -13,7 +13,6 @@ import (
 	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/store"
 	"github.com/0xdeafcafe/photon/canvas"
-	"github.com/0xdeafcafe/photon/cellw"
 )
 
 // The header's tabs (docs/ui.md): Home is the sidebar and a conversation;
@@ -73,6 +72,9 @@ func (m *Model) setTab(t tabID) tea.Cmd {
 	if t != m.tabs.on {
 		m.tabs.on = t
 		m.setFocus(onSide)
+	}
+	if t == tabClaude {
+		m.claudeOpened()
 	}
 	l, ok := t.list()
 	if !ok {
@@ -248,7 +250,7 @@ func (m *Model) tabHints() [][2]string {
 	case tabLater:
 		return [][2]string{{"↑↓", "move"}, {"enter", "go to it"}, {"d", "done"}, {"x", "remove"}, {"alt+1-5", "tabs"}}
 	}
-	return [][2]string{{"alt+1", "home"}}
+	return m.claudeHints()
 }
 
 // --- drawing ---
@@ -549,17 +551,4 @@ func ago(d time.Duration) string {
 		return fmt.Sprintf("%dh", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dm", int(d.Minutes()))
-}
-
-// claude is the Claude tab until it has rush to talk to.
-func (m *Model) claude(w, h int) []canvas.Row {
-	ink := m.pal.Main
-	rows := make([]canvas.Row, h)
-	for i := range rows {
-		rows[i] = canvas.Fit(nil, w, ink.Text)
-	}
-	if msg := "Claude needs rush"; h > 2 {
-		rows[h/2] = canvas.Fit(canvas.Row{canvas.T(strings.Repeat(" ", max(0, (w-cellw.String(msg))/2))+msg, ink.Dim)}, w, ink.Text)
-	}
-	return rows
 }

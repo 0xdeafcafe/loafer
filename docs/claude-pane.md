@@ -1,6 +1,6 @@
 # the claude pane
 
-status: design, 2026-10-09. not built: rush can't yet hand an answer back to another program, see [what rush would need](#what-rush-would-need).
+status: built, 2026-10-09, on `rush session watch`. not yet: past sessions listed under the starters, `esc` twice to interrupt, the jump bar's "ask Claude …", and "insert as draft" asking which conversation (the draft goes to the one attached, else the open one).
 
 slackbot's ai is replaced by a pane that asks your own agent, through rush. loafer gathers the slack text, rush runs the agent on your accounts, and loafer shows what it says. rush is optional: without it the pane is a dim line saying how to get it, and nothing else in loafer changes.
 

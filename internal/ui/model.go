@@ -66,7 +66,8 @@ type Model struct {
 	editing  string           // the message the composer is changing
 	deleting string           // the message d was pressed on once
 
-	al alerts // notifications and the typing line (alerts.go)
+	al     alerts // notifications and the typing line (alerts.go)
+	claude claude // the Claude tab (claude.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -247,6 +248,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ground = theme.Terminal(&bg, nil)
 		m.pal = NewPalette(m.ground, Aubergine, false)
 		m.drawn.Clear()
+		m.claude.redraw()
 	case storeMsg:
 		m.st.Read(func(v store.View) {
 			if l := v.Link(); l != "" {
@@ -304,6 +306,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case searchTickMsg, searchedMsg, foundMsg:
 		return m, m.searched(msg)
+	case askedMsg, claudeMsg, caughtUpMsg, rushDoneMsg:
+		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
 		return m, m.alert(msg)
 	case flashOffMsg:
@@ -322,6 +326,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if m.find.on {
 			m.find.query = append(m.find.query, []rune(strings.ReplaceAll(msg.Content, "\n", " "))...)
 			return m, m.edited()
+		} else if m.tabs.on == tabClaude {
+			m.claude.insert(msg.Content)
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
 			m.refreshPop()
@@ -415,9 +421,11 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.goForward()
 	case "alt+1", "alt+2", "alt+3", "alt+4", "alt+5":
 		return m.setTab(tabID(s[4] - '1'))
+	case "alt+c":
+		return m.claudeHere()
 	}
 	if m.tabs.on == tabClaude {
-		return nil // ponytail: the Claude pane's keys go here
+		return m.claudeKey(k)
 	}
 	switch m.focus {
 	case onSide:
@@ -529,7 +537,9 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 			return m.pick(newest)
 		}
 		m.setFocus(onSide)
-	case "i", "a", "enter":
+	case "a":
+		return m.claudeAbout()
+	case "i", "enter":
 		m.setFocus(onCompose)
 	}
 	return nil

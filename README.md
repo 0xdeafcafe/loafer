@@ -40,8 +40,9 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **search**: `ctrl+f` searches messages with slack's own modifiers (`in:#dev from:@drew is:thread`), the matched words lit, and `enter` goes to the message, fetching what's around it if it's old.
 - **pictures**: in kitty and ghostty, avatars and images are drawn as pictures, fetched once and kept small on disk. elsewhere it's initials and a `▣ name` line, as before.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
+- **claude**: the last tab asks your own agent through [rush](https://github.com/0xdeafcafe/rush), with the conversation you're in attached: summarise it, draft a reply in your tone, catch you up, or ask anything. `a` on a message asks about it. the answer streams in, follow-ups carry on the same session, and `i` puts the answer in the box as a draft. it never sends for you. without rush the tab says how to get it.
 
-on the way, in this order: threads, block kit buttons and modals, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
+on the way, in this order: threads, block kit buttons and modals, and notifications while it's closed.
 
 ## when it goes wrong
 

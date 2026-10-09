@@ -45,7 +45,8 @@ func fixture(t testing.TB) *Model {
 	m := New(context.Background(), st, nil)
 	m.w, m.h = 120, 40
 	m.live = "live"
-	m.render() // builds the sidebar
+	m.claude.looked = true // never the real rush; claude_test gives it a fake
+	m.render()             // builds the sidebar
 	m.openConv("C1")
 	return m
 }

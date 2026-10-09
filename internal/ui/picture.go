@@ -72,6 +72,7 @@ func (m *Model) onPics(msg tea.Msg) (tea.Cmd, bool) {
 		return nil, false
 	}
 	m.drawn.Clear()
+	m.claude.redraw()
 	return cmd, true
 }
 

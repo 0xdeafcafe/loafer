@@ -237,7 +237,7 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	ink := m.pal.Main
 	if m.tabs.on == tabClaude {
-		return m.claude(w, h)
+		return m.claudePane(v, w, h)
 	}
 	c := v.Conv(m.open)
 	if c == nil {
@@ -405,7 +405,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":
