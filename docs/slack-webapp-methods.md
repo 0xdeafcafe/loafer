@@ -259,6 +259,10 @@ Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/ric
 - `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
 - `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
 
+## Workspace colour (UNCERTAIN, from memory of the web client)
+
+`slack.ThemeColour` reads the workspace's colour for the header wash from `client.userBoot`'s `prefs.sidebar_theme_custom_values`: a string of JSON with `column_bg` (`"#3F0E40"`) among the theme's other colours. Slack's own aubergines (`#3F0E40`, `#4A154B`) count as no colour, so a workspace on the default gets a colour hashed from its team id instead. Newer clients may keep themes elsewhere (`prefs.sidebar_theme`, or `users.prefs.get`); if so this finds nothing and every workspace gets the hash. The team object itself has no colour that we know of. Check against a DevTools capture of `client.userBoot`.
+
 ## Reactions and emoji (loafer's assumptions)
 
 `reactions.add` and `reactions.remove` take `channel`, `timestamp` and `name`, as the public API does; the registry above lists both but no call site was recovered. Errors loafer treats as "already how you wanted it": `already_reacted` and `no_reaction`. Names are iamcal/emoji-data's `short_name` (`+1`, not its alias `thumbsup`), with skin tones as `name::skin-tone-2` to `6`; loafer files a reaction under that canonical name so Slack's `reaction_added` event lands on the same chip. Two-tone names (`handshake::skin-tone-2-3`) are UNCERTAIN and not drawn as characters.

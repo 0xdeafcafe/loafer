@@ -173,10 +173,10 @@ func TestE2EWorkspaceSignedOut(t *testing.T) {
 	if d.x.SignedOut() {
 		t.Fatal("one signed out shouldn't be all")
 	}
-	t.Logf("open %q", front.open)
-	// Crumb carries on.
-	d.a.Post(slacktest.Alerts, slacktest.Tomas, "still here", "")
-	d.until("crumb's #alerts unread", func() bool { return d.has("4 unread") })
+	// Crumb carries on. (#design, as what opened first depends on whether
+	// the sections beat boot.)
+	d.a.Post(slacktest.Design, slacktest.Tomas, "still here", "")
+	d.until("crumb's #design unread", func() bool { return d.has("4 unread") })
 }
 
 func TestTeamInitials(t *testing.T) {
