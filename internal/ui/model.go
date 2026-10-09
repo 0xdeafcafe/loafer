@@ -60,6 +60,7 @@ type Model struct {
 	find      finder   // ctrl+f
 	th        threadPane
 	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
+	att       attachState
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -194,6 +195,9 @@ func (m *Model) markRead() tea.Cmd {
 }
 
 func (m *Model) send() tea.Cmd {
+	if cmd, ok := m.sendFiles(); ok {
+		return cmd
+	}
 	text := strings.TrimSpace(encode(m.input, m.ments))
 	if text == "" || m.open == "" {
 		return nil
@@ -321,6 +325,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.searched(msg)
 	case threadMsg:
 		return m, m.threaded(msg)
+	case fileMsg, listMsg, upMsg, savedMsg:
+		return m, m.attachUpdate(msg)
 	case askedMsg, claudeMsg, caughtUpMsg, rushDoneMsg:
 		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
@@ -343,6 +349,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.edited()
 		} else if m.tabs.on == tabClaude {
 			m.claude.insert(msg.Content)
+		} else if cmd, ok := m.pastedFiles(msg.Content); ok {
+			return m, cmd
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
 			m.refreshPop()
@@ -383,6 +391,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
+	}
+	if cmd, ok := m.attachKey(k, s); ok {
+		return cmd
 	}
 	if m.focus == onCompose && m.pop.on && m.popKey(s) {
 		return nil
@@ -559,6 +570,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		m.setFocus(onSide)
 	case "t", "right", "enter":
 		return m.threadAt(s)
+	case "D", "O":
+		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
 	case "i":
@@ -589,7 +602,11 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 	case "backspace":
 		if m.cur > 0 {
 			m.splice(m.cur-1, m.cur, nil)
+		} else {
+			m.dropFile()
 		}
+	case "ctrl+o":
+		return m.askFile()
 	case "alt+backspace", "ctrl+w":
 		m.splice(m.wordLeft(m.cur), m.cur, nil)
 	case "ctrl+u":
