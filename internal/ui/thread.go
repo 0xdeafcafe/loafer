@@ -341,7 +341,7 @@ func (m *Model) also(v store.View, c *store.Conv) string {
 func (m *Model) threadHints() [][2]string {
 	switch {
 	case m.focus == onThread:
-		return [][2]string{{"↑↓", "move"}, {"e", "edit"}, {"r", "react"}, {"c l", "copy text, link"}, {"i", "reply"}, {"esc", "close"}}
+		return [][2]string{{"↑↓", "move"}, {".", "actions"}, {"e", "edit"}, {"r", "react"}, {"c l", "copy text, link"}, {"i", "reply"}, {"esc", "close"}}
 	case m.th.editing != "":
 		return [][2]string{{"enter", "save"}, {"shift+enter", "new line"}, {"esc", "cancel"}}
 	}

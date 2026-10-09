@@ -229,6 +229,7 @@ func chip(p *Palette, v store.View, e element) canvas.Seg {
 		label := " " + e.Text.flat(v) + " "
 		if e.URL != "" {
 			label += "↗ "
+			st.Link = e.URL
 		}
 		return canvas.T(label, st)
 	case "overflow":

@@ -112,6 +112,9 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 	}
 	body = append(body, attachmentRows(p, v, m.Attachments, bodyW, now)...)
 	body = append(body, fileRows(p, m.Files, bodyW)...)
+	if len(m.PinnedTo) > 0 {
+		body = append(body, canvas.Row{canvas.T("⚑ pinned", ink.Dim)})
+	}
 	if len(m.Reactions) > 0 {
 		body = append(body, reactionRow(p, v, m.Reactions))
 	}

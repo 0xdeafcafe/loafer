@@ -267,20 +267,31 @@ Mentions inside text:
 ### Message actions menu (`.`)
 
 ```
-                                        ╭─────────────────────────────────╮
-                                        │  ☺ react                      r │
-                                        │  ↩ reply in thread            t │
-                                        │  ◆ save for later             s │
-                                        │  ◷ remind me              ▸     │
-                                        │  ● mark unread                u │
-                                        │  ⧉ copy link                  l │
-                                        │  ⧉ copy text                  c │
-                                        │  ✎ edit                       e │
-                                        │  ✗ delete                   del │
-                                        ╰─────────────────────────────────╯
+                                        ╭─ Actions ────────────────────────╮
+                                        │ ▍ ☺ react                     r  │
+                                        │   ↩ reply in thread           t  │
+                                        │   ◇ ask Claude                a  │
+                                        │   ◆ save for later            s  │
+                                        │   ◷ remind me ▸               m  │
+                                        │   ⚑ pin                       p  │
+                                        │   ● mark unread from here     u  │
+                                        │   ⧉ copy link                 l  │
+                                        │   ⧉ copy text                 c  │
+                                        │   ↗ open link                 o  │
+                                        │   ✎ edit                      e  │
+                                        │   ✗ delete                    d  │
+                                        ╰─ ↑↓ · enter · esc ───────────────╯
 ```
 
-The menu is anchored at the selected message, on the right. Its keys also work without opening it. Delete is red and asks for confirmation through rush's confirm.
+The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, and the thread pane's menu has no reply in thread or mark unread. Delete is red and works as `d d` does: the menu's `d` is the first press.
+
+- **Copy text and open link** use what's drawn, blocks, rich text, attachments and files included (not the fallback text Slack keeps for notifications), the same renderer laid out wide so nothing wraps. The bars and the code's language tag are left out. Open link takes the first http, https or mailto link in it, a button's included.
+- **Save for later** (`s`) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `s` fetches it.
+- **Remind me** (`m`) is a small chooser: `1` in 20 minutes, `2` in 1 hour, `3` in 3 hours, `4` tomorrow at 9, `5` next week (Monday, at 9), each with its time. It saves the message for later with a due time, as Slack's own "remind me about this" does now, so it shows in Later as due; a message already saved just gets the new time.
+- **Pin** (`p`) pins it for the conversation, or unpins. A pinned message has a dim `⚑ pinned` line under it, and pins from other devices arrive live.
+- **Mark unread from here** (`u`) moves the read marker to the message before it, so it and everything after are unread, in the sidebar too, and the `new` line moves to it. It stays that way (watching new messages arrive doesn't read it) until the conversation is opened again. Not in threads.
+
+Saves, pins and marks change here at once and are put back if Slack refuses.
 
 ## DMs
 
@@ -358,7 +369,7 @@ The composer collapses to a single row until it's focused. Forwarded messages an
     ╰ Can you send me a copy of your current 30% ruling beschikking…
 ```
 
-Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter` goes to the message, `d` marks it done and `x` takes it off the list. Not yet: the archived and completed lists, archiving and reminders.
+Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter` goes to the message, `d` marks it done and `x` takes it off the list. Not yet: the archived and completed lists, and archiving. Reminders are set from a message (`m`).
 
 ## ctrl+k: jump and search
 
@@ -460,8 +471,13 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `r` | react: a picker over every emoji, yours and the usual ones first. `enter` adds it, or takes it away if it's already yours (marked ✓) |
 | `1`-`9` | toggle the message's nth reaction, in the order they're drawn |
 | `d d` or `delete delete` | bin it, if it's yours |
-| `c` `l` | copy its text, copy a link to it |
-| `o` | open its first link (http, https and mailto only) |
+| `.` | the actions menu: everything here, with its key |
+| `c` `l` | copy its text as it's drawn, blocks and attachments included; copy a link to it |
+| `o` | open its first link, as drawn (http, https and mailto only) |
+| `s` | save for later, or take it off Later |
+| `m` | remind me: in 20 minutes, 1 hour, 3 hours, tomorrow at 9 or next week |
+| `p` | pin it, or unpin it |
+| `u` | mark unread from here |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
@@ -482,7 +498,7 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 **Claude**: the box has the keys when the tab opens. With nothing asked yet, `↑↓` choose a starter (summarise, draft a reply, catch me up) and `enter` runs it; type and `enter` asks instead. `backspace` at the start of the box takes the last chip off. The answer streams in and has the keys once it's done: `i` puts it into its conversation's composer as a draft (after what's there, never sent), `↑↓` `pgup pgdn` scroll, and `enter` or typing goes back to the box. A follow-up goes to the same session; `alt+n` starts a new one, `ctrl+o` opens it in rush (`rush open <id> --hosted`, `ctrl+q` comes back), and `esc` goes from the box to the answer, then Home.
 
-Not yet: save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
+Not yet: a saved marker on messages, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
 

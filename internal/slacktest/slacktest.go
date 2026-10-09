@@ -40,6 +40,7 @@ type Server struct {
 	order    []string // conversation ids, as boot lists them
 	sections []slack.Section
 	emoji    map[string]string
+	saved    []slack.SavedItem
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
@@ -100,6 +101,13 @@ func (s *Server) Messages(channel string) []slack.Message {
 		return slices.Clone(c.msgs)
 	}
 	return nil
+}
+
+// Saved is what's saved for later, newest first.
+func (s *Server) Saved() []slack.SavedItem {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.saved)
 }
 
 // Push sends event, raw JSON, to every open socket.
@@ -282,6 +290,52 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		ts := m.TS
 		s.remove(ch, ts)
 		return map[string]any{"channel": ch, "ts": ts}, ""
+
+	case "pins.add", "pins.remove":
+		m := s.find(ch, f.Get("timestamp"))
+		if m == nil {
+			return nil, "message_not_found"
+		}
+		pinned := slices.Contains(m.PinnedTo, ch)
+		switch {
+		case method == "pins.add" && pinned:
+			return nil, "already_pinned"
+		case method == "pins.remove" && !pinned:
+			return nil, "no_pin"
+		case pinned:
+			m.PinnedTo = slices.DeleteFunc(m.PinnedTo, func(c string) bool { return c == ch })
+		default:
+			m.PinnedTo = append(m.PinnedTo, ch)
+		}
+		kind := "pin_added"
+		if pinned {
+			kind = "pin_removed"
+		}
+		s.pushAny(map[string]any{"type": kind, "channel_id": ch, "item": map[string]any{"type": "message", "message": map[string]any{"ts": m.TS}}})
+		return map[string]any{}, ""
+
+	case "saved.list":
+		return map[string]any{"saved_items": s.saved}, ""
+
+	case "saved.add", "saved.update", "saved.delete":
+		id, ts := f.Get("item_id"), f.Get("ts")
+		due, _ := strconv.ParseInt(f.Get("date_due"), 10, 64)
+		at := slices.IndexFunc(s.saved, func(x slack.SavedItem) bool { return x.ID == id && x.TS == ts })
+		switch {
+		case method == "saved.add" && at >= 0:
+			return nil, "already_saved"
+		case method == "saved.add":
+			s.saved = slices.Insert(s.saved, 0, slack.SavedItem{Type: f.Get("item_type"), ID: id, TS: ts, DateDue: due, State: "in_progress"})
+		case at < 0:
+			return nil, "item_not_found"
+		case method == "saved.delete":
+			s.saved = slices.Delete(s.saved, at, at+1)
+		default:
+			if due > 0 {
+				s.saved[at].DateDue = due
+			}
+		}
+		return map[string]any{}, ""
 
 	case "conversations.mark":
 		if c == nil {

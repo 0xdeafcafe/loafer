@@ -69,8 +69,9 @@ type Model struct {
 	editing  string           // the message the composer is changing
 	deleting string           // the message d was pressed on once
 
-	al     alerts // notifications and the typing line (alerts.go)
-	claude claude // the Claude tab (claude.go)
+	al     alerts  // notifications and the typing line (alerts.go)
+	claude claude  // the Claude tab (claude.go)
+	acts   actions // the . menu and what it does (actions.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -151,7 +152,7 @@ func (m *Model) openConv(id string) tea.Cmd {
 		m.keep(m.open)
 	}
 	m.restore(id)
-	m.open, m.scroll, m.sel, m.deleting = id, 0, "", ""
+	m.open, m.scroll, m.sel, m.deleting, m.acts.unread = id, 0, "", "", ""
 	m.watch()
 	if i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id }); i >= 0 {
 		m.sideAt = i
@@ -170,6 +171,9 @@ func (m *Model) openConv(id string) tea.Cmd {
 // markRead moves the open conversation's read marker to its newest
 // message, here at once and at Slack in the background.
 func (m *Model) markRead() tea.Cmd {
+	if m.acts.unread == m.open {
+		return nil // marked unread by hand, and stays so
+	}
 	var ts string
 	m.st.Read(func(v store.View) {
 		c, w := v.Conv(m.open), v.Window(m.open)
@@ -306,6 +310,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
 		}
+	case actedMsg:
+		return m, m.acted(msg)
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
@@ -374,6 +380,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.emo.pick.on && s != "ctrl+c" && s != "f12" {
 		return m.reactKey(k)
+	}
+	if m.acts.menu.on && s != "ctrl+c" && s != "f12" {
+		return m.menuKey(k)
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
@@ -555,6 +564,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.threadAt(s)
 	case "a":
 		return m.claudeAbout()
+	case ".", "u", "s", "p", "m":
+		return m.actKey(s)
 	case "i":
 		m.setFocus(onCompose)
 	}
