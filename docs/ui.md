@@ -213,6 +213,12 @@ Rendering:
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
 - **Images** use kitty placeholders up to 12 rows tall, or `▣ name 1200×800` when graphics are off.
+- **Headers** are bold and bright, with a blank row above unless they come first. **Sections** are their text, then their fields, two columns when each gets 20 cells, then the accessory as its chip.
+- A message with blocks shows the blocks and not its text, as Slack does: the text is the notification's fallback. If none of its blocks can be drawn, the text shows instead. One that can't (an `input`, a `table`) is a faint `unsupported block (input)`.
+- **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.
+- **Files** are a line each: `▣` image, `▶` video, `♪` audio, `▤` the rest, then the name (a link to it in Slack), its type and size, dim. A deleted file is a faint `▤ this file was deleted`.
+
+For now all of this is read-only: buttons and menus draw, but `tab` and `enter` don't press them yet.
 
 Reactions: chips with the emoji and count. Yours have an orange count, others dim. `☺+` adds one. Custom emoji are 2×1-cell images, or `:name:` in dim.
 
@@ -410,7 +416,7 @@ Messages are Slack's mrkdwn, but bots and anything pasted from an editor arrive 
 - **code**: a ``` block sits on the panel ground, cut rather than wrapped at words. If the fence names a language (```go), it's highlighted with rush's highlighter (`photon/hl`: go, js/ts, python, rust, sh, json, yaml, toml, css, sql, ruby, the c family, lua, php, markdown) and the name sits dim in the top right.
 - **quotes** `>` get a faint `▏` and sub text; **rules** `---` are a faint line.
 
-Not yet: Slack's own `rich_text` blocks, which carry the same things more exactly and come with Block Kit.
+Slack's own `rich_text` blocks, which most people's messages carry, are read into the same lines and drawn the same way, so a message looks alike whichever it came as. Emoji in them come with their characters, so they show even past the short table.
 
 ## Keys
 

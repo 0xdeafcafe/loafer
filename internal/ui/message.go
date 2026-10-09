@@ -1,16 +1,13 @@
 package ui
 
 import (
-	"encoding/json/jsontext"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/0xdeafcafe/loafer/internal/mrkdwn"
 	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/store"
 	"github.com/0xdeafcafe/photon/canvas"
-	"github.com/0xdeafcafe/photon/jsonx"
 	"github.com/0xdeafcafe/photon/theme"
 )
 
@@ -100,12 +97,13 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 		rows = append(rows, head)
 	}
 
-	body := textRows(p, v, mrkdwn.Parse(m.Text), bodyW)
+	body := bodyRows(p, v, m, bodyW)
 	if m.Edited != nil && len(body) > 0 {
 		last := len(body) - 1
 		body[last] = append(body[last], canvas.T(" (edited)", ink.Dim))
 	}
-	body = append(body, attachmentRows(p, v, m.Attachments, bodyW)...)
+	body = append(body, attachmentRows(p, v, m.Attachments, bodyW, now)...)
+	body = append(body, fileRows(p, m.Files, bodyW)...)
 	if len(m.Reactions) > 0 {
 		body = append(body, reactionRow(p, v, m.Reactions))
 	}
@@ -166,93 +164,6 @@ var emojiTable = map[string]string{
 	"stuck_out_tongue_winking_eye": "😜", "thinking_face": "🤔", "100": "💯", "wave": "👋", "ok_hand": "👌",
 	"raised_hands": "🙌", "clap": "👏", "sweat_smile": "😅", "point_up": "☝️", "speech_balloon": "💬",
 	"bangbang": "‼️", "sob": "😭", "zap": "⚡", "bug": "🐛", "memo": "📝", "link": "🔗", "lock": "🔒",
-}
-
-// attachment is a legacy attachment, as bots like Grafana still send.
-type attachment struct {
-	Color     string `json:"color"`
-	Pretext   string `json:"pretext"`
-	Title     string `json:"title"`
-	TitleLink string `json:"title_link"`
-	Text      string `json:"text"`
-	Fallback  string `json:"fallback"`
-	Footer    string `json:"footer"`
-	Fields    []struct {
-		Title string `json:"title"`
-		Value string `json:"value"`
-	} `json:"fields"`
-}
-
-func attachmentRows(p *Palette, v store.View, raw jsontext.Value, w int) []canvas.Row {
-	if len(raw) == 0 {
-		return nil
-	}
-	var as []attachment
-	if jsonx.Unmarshal(raw, &as) != nil {
-		return nil
-	}
-	var out []canvas.Row
-	for _, a := range as {
-		bar := canvas.T("▌ ", p.Main.Faint)
-		if c, ok := hexRGB(a.Color); ok {
-			bar = canvas.T("▌ ", p.Main.Text.Fg(c))
-		}
-		var inner []canvas.Row
-		add := func(text string, st *canvas.Style) {
-			for _, l := range mrkdwn.Parse(text) {
-				rows := lineRows(p, v, l, w-2)
-				if st != nil {
-					for i := range rows {
-						rows[i] = canvas.Restyle(rows[i], *st)
-					}
-				}
-				inner = append(inner, rows...)
-			}
-		}
-		if a.Pretext != "" {
-			add(a.Pretext, nil)
-		}
-		if a.Title != "" {
-			st := p.Blue.With(canvas.Bold)
-			st.Link = a.TitleLink
-			add(a.Title, &st)
-		}
-		if a.Text != "" {
-			add(a.Text, nil)
-		} else if a.Title == "" && a.Fallback != "" {
-			add(a.Fallback, nil)
-		}
-		for _, f := range a.Fields {
-			bold := p.Main.Text.With(canvas.Bold)
-			add(f.Title, &bold)
-			add(f.Value, nil)
-		}
-		if a.Footer != "" {
-			add(a.Footer, &p.Main.Dim)
-		}
-		for _, r := range inner {
-			out = append(out, append(canvas.Row{bar}, r...))
-		}
-	}
-	return out
-}
-
-// hexRGB reads Slack's attachment colour ("#36a64f", "36a64f", or a name).
-func hexRGB(s string) (theme.RGB, bool) {
-	switch s {
-	case "good":
-		return rgb(46, 182, 125), true
-	case "warning":
-		return rgb(236, 178, 46), true
-	case "danger":
-		return rgb(224, 30, 90), true
-	}
-	s = strings.TrimPrefix(s, "#")
-	n, err := strconv.ParseUint(s, 16, 32)
-	if len(s) != 6 || err != nil {
-		return theme.RGB{}, false
-	}
-	return rgb(uint8(n>>16), uint8(n>>8), uint8(n)), true
 }
 
 func reactionRow(p *Palette, v store.View, rs []slack.Reaction) canvas.Row {

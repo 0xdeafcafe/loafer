@@ -31,6 +31,8 @@ func fingerprint(msg *slack.Message) string {
 	var b strings.Builder
 	b.WriteString(strconv.Itoa(len(msg.Text)))
 	b.WriteByte('/')
+	b.WriteString(strconv.Itoa(len(msg.Blocks) + len(msg.Attachments) + len(msg.Files)))
+	b.WriteByte('/')
 	b.WriteString(strconv.Itoa(msg.ReplyCount))
 	b.WriteString(msg.LatestReply)
 	if msg.Edited != nil {

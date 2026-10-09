@@ -199,6 +199,13 @@ Fetchers FOUND (`conversations.history`, `.replies`, `.historyChanges`, `.view`,
 is not in this cache except the boot one above (`ignore_replies:!0`, `include_stories`, `include_mutation_timestamps`, `no_members`, `canonical_avatars`).
 `include_pin_count`: NOT FOUND. Replies thunk uses `{channelId,threadTs,oldest,latest,limit}` and pages both directions, returning `{msgs,hasMore,deleted}`.
 
+Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/richtext.go`), from Slack's public Block Kit docs, not from a trace:
+- `blocks[]`, each decoded on its own so one unknown block costs only itself. `rich_text` parts: `rich_text_section/list/preformatted/quote`;
+  inline `text` (with `style.bold/italic/strike/code`), `link`, `user`, `channel`, `usergroup`, `broadcast`, `emoji` (with `unicode`), `date`, `color`.
+- UNCERTAIN: `image_width`/`image_height` on stored image blocks and attachments; used when present.
+- UNCERTAIN: an attachment's `ts` is a number on legacy attachments and a string on message unfurls; read as either.
+- `files[]`: `name`, `title`, `mimetype`, `pretty_type`, `size`, `permalink`, `mode` (`tombstone` and `hidden_by_limit` carry no name).
+
 ## Other interesting methods (registry sample)
 
 `chat.postMessage/update/delete/shareMessage`, `reactions.add/get/remove`, `pins.add/list/remove`, `bookmarks.*`, `emoji.*`, `users.list`,
