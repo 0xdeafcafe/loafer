@@ -229,6 +229,13 @@ Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/ric
 - `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
 - `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
 
+## Pictures (UNCERTAIN, not tried against a live workspace)
+
+`internal/images` fetches with `slack.Client.Fetch`, a plain GET.
+- Private files (`files[].url_private`, `thumb_360`/`thumb_480`/`thumb_720` on `files.slack.com`) get the session's `d` cookie and nothing else, as a browser tab sends it. Whether the cookie alone is enough, or `files.slack.com` also wants `Authorization: Bearer xoxc-…` as it does for app tokens, is unchecked. If it 302s to a login page, the decode fails and the file shows as its line, as with graphics off.
+- Avatars (`users.list` `profile.image_72`, a bot's `bot_profile.icons.image_72`) are on `avatars.slack-edge.com` or `secure.gravatar.com` and get no credentials. The cookie only ever goes over https to `slack.com` and its subdomains, and Go's client drops it on a redirect elsewhere.
+- Image files are sized from `original_w`/`original_h`; image blocks from `image_width`/`image_height`, which are undocumented. Without them a picture takes no room until it lands.
+
 ## Not recovered / suggested next step
 
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,

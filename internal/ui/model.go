@@ -110,7 +110,7 @@ type (
 )
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot())
+	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot(), m.startPics())
 }
 
 func (m *Model) waitStore() tea.Cmd {
@@ -230,6 +230,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			slog.Warn("stall", "what", fmt.Sprintf("%T", msg), "ms", d.Milliseconds())
 		}
 	}()
+	if cmd, ok := m.onPics(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
