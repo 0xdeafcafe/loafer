@@ -455,6 +455,10 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
+Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
+
+**Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+
 Not yet: thread keys (`t`, `→`), reactions (`r`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
