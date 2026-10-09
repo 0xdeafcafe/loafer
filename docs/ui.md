@@ -141,15 +141,17 @@ Notes:
   - The header, tab row and sidebar sit on the aubergine, and the header's wash ramps into the workspace's colour toward the right edge (rule 2a).
 - **Workspace rail**, only when you're signed in to more than one: four columns down the far left, a step darker than the sidebar. Each workspace is its initials on its colour (`CC` for Crumb & Co, `La` for LangWatch), the one shown marked with the orange `▍`, and under them its mentions (`@2` in yellow, `@+` past nine), else `•` when anything's unread, or a red `✗` once it's signed out.
 - **Sidebar** = rush's list pane.
-  - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. Collapsed sections with unreads show a count; quiet collapsed sections fold into one `▸ Social · Product · 3 more` line.
-  - Rows: unread names are bright and bold, read ones plain sub, muted ones faint. On the right, the unread count is dim, and mentions are `@2` in yellow bold.
+  - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. A folded section is `▸ name 3 ──────` with how many it hides, and still lists what has unread, what mentions you and the conversation that's open. Not yet: quiet folded sections joined into one `▸ Social · Product · 3 more` line.
+  - Rows: unread names are bright and bold, read ones plain sub, muted ones faint (and not counted in the header or by `ctrl+n`). On the right, the unread count is dim, and mentions are `@2` in yellow bold.
   - `↓ 4 more unread` and `↑ …` at the edges are Slack's "More unread messages" pills, drawn as rush's `↓ N more` chip.
-- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line.
+- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line. One that couldn't be fetched is tried once more when it's next drawn, a minute or more on. The pictures on disk are kept under 64 MB, the oldest going when loafer starts.
 - **Pane header**: rush's chrome-filled block. It shows the channel, its topic dim, members `⊙ 4`, saved `◆`, and search `⌕`. One tab row, with the active tab underlined in orange.
 - **Messages**:
   - **Header.** An avatar (a 2×1 kitty picture, or initials on a 2×2 tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
   - **Day dividers** are a dim label centred on nothing, Slack's pill without the pill. The current day sticks to the top as a chrome chip.
   - **The "new" line** is a full-width orange rule with `new` at the right.
+  - **The newer pill**: scrolled up, or left back in time by a search, a chip sits centred on the list's last row, `↓ 3 new messages  G` (what's come since you last read it, not counting yours), or `↓ newer messages` where that can't be told. The key is `G` in the messages and `ctrl+end` elsewhere.
+  - **Read** is marked as you watch it come in: at the newest, in a focused terminal. A loafer in the background reads nothing until it has focus again.
   - **Attachments and blocks** sit behind a `▌` in their colour. Fields lay out in two columns when there's room. The footer is dim with ` · `. Long bodies fold at 8 rows to `⋯ show more`, in blue.
   - **Code blocks** are a `panelBG` fill, indented, highlighted with rush's highlighter. Inline code is cText on the chip fill.
   - **Selected message**: `selBG` fill plus the orange `▍`, like any row. Its actions are in the hint line and the `.` menu, rather than a hover toolbar.
@@ -184,8 +186,9 @@ Notes:
                                             │ ╰ ctrl+b also send to channel ──────────────────╯
 ```
 
-- The thread is rush's side pane: rush's `sideWidth()` rule (28% of the width, at least 30 columns, at most 64). Under 100 columns it replaces the channel, and esc comes back. Not yet: resizing by dragging the `│`.
-- Thread summaries under a message: `↩ 4 replies · last 16:47` in blue. Not yet: the repliers' avatars as tiny 1-cell images, or their initials.
+- The thread is rush's side pane: rush's `sideWidth()` rule (28% of the width, at least 30 columns, at most 64). Under 100 columns it replaces the channel, and esc comes back; any key that goes to the channel (`←`, `i` in the sidebar) closes it first, so focus is never on what's hidden. The mouse wheel scrolls whichever the pointer's over. Not yet: resizing by dragging the `│`.
+- Thread summaries under a message: `↩ 4 replies · last 16:47` in blue, then the first few repliers' avatars as 1-cell pictures where the terminal draws them.
+- After the socket drops, the thread looked at last is fetched again, as the conversation is.
 - For now the parent's own `↩ 4 replies` line stands where the "N replies" section rule goes.
 - Replies arrive live, as do edits, deletes and reactions in the thread, and it's marked read (`subscriptions.thread.mark`) as its newest reply shows.
 
@@ -210,8 +213,9 @@ Rendering:
   - danger: red fill
   - default: chip fill with cText
   - link buttons: a trailing `↗`
-- **Choosing a button**: in a selected message, `tab` / `shift+tab` move between its buttons, and the chosen one gets an orange underline. `enter` presses it, and `✻` shows until the response arrives.
-- **Selects and overflow menus** are a chip with `▾` that opens rush's picker sheet.
+- **Choosing a button**: in a selected message, `b` / `shift+b` step through its buttons and menus (`tab` stays the pane key), and the chosen one goes orange. `enter` presses it, `esc` lets it go, and `✻ label` sits in the hint line until Slack answers.
+- **Selects and overflow menus** are a chip with `▾`; `enter` opens a small chooser (`↑↓`, `enter`, `esc`). A **datepicker** takes the date typed, as `2026-10-09`. Other selects (users, channels, external) and checkboxes in a message say they can't be worked yet.
+- Whatever the app does next comes down the websocket: an edit to the message, or a modal (below).
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
 - **Images** (image blocks, attachments' images, image files) are kitty placeholders up to 8 rows tall, with their `▣ name 1200×800` line (or the file's line) under them as a caption; with graphics off it's just that line. One on its way holds the rows it'll take when its size is known, so nothing jumps when it lands. A context block's images are a picture a row high beside its text. Behind an overlay, pictures go blank.
@@ -220,7 +224,7 @@ Rendering:
 - **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.
 - **Files** are a line each: `▣` image, `▶` video, `♪` audio, `▤` the rest, then the name (a link to it in Slack), its type and size, dim. A deleted file is a faint `▤ this file was deleted`.
 
-For now all of this is read-only: buttons and menus draw, but `tab` and `enter` don't press them yet.
+Not yet: buttons inside attachments and inside modals, and the `✻` spinning.
 
 Reactions: chips with the emoji and count. Yours sit on a warm chip with an orange count, others dim. `r` on the message adds one, `1`-`9` toggles one that's there. Custom emoji are 2×1-cell images, or `:name:` in dim.
 
@@ -261,9 +265,12 @@ Mentions inside text:
 - Callouts get a full-width fill and a `┃` rail:
   - danger: `errBG` with a red `!`
   - warning: `askBG` with a yellow `!`
-- Inputs are rush input boxes inside the sheet.
-- Keys: `tab` moves focus, and `ctrl+enter` submits.
-- Leaving with edits opens rush's yellow-edged confirm: `Leave this form? You'll lose what you've entered.  y leave  n keep editing`.
+- It opens when Slack pushes `view_opened` for a press made here (by its `client_token`), stacks on `view_pushed`, changes on `view_updated` and goes on `view_closed`.
+- Inputs: plain text and datepickers are a filled row you type into (at the end only, for now), a static select is a chip that opens the chooser, and checkboxes and radio buttons are a `☐ ☑` or `○ ◉` line each. Optional ones say so. Any other block draws as it would in a message.
+- Keys: `tab` `shift+tab` move between the inputs, then the submit and close buttons, the focused one marked with the orange `▍`. `↑↓` move within checkboxes and radio buttons, `space` or `enter` ticks one, `enter` on a button presses it, and `ctrl+enter` (or `ctrl+s`, for terminals that don't send it) submits.
+- Submitting checks the required inputs and the date first, then sends `views.submit`; what the app says is wrong shows in red under each input, and the modal closes once it's taken.
+- Leaving with edits turns the edge yellow and asks: `leave this form? you'll lose what you've entered`, `y` leave, `n` keep editing.
+- Not yet: the `ctrl+o ↗` link, callouts' rails, and rush input boxes proper.
 
 ### Message actions menu (`.`)
 
@@ -301,7 +308,7 @@ The menu is anchored at the selected message, on the right. Its keys also work w
 
 DM rows use rush's two-row agent layout: name, then a `╰` summary line in dim. The time is right-aligned and short: today shows the clock time, then `monday`, then `23 sep`. Unread rows are bright and bold.
 
-The list goes where the sidebar is, newest first, and `enter` opens the DM beside it with you in the composer. The 25 newest have their latest message fetched the first time the tab opens; the rest get one when something arrives. Not yet: unread only, and new.
+The list goes where the sidebar is, newest first, and `enter` opens the DM beside it with you in the composer. The 25 newest have their latest message fetched the first time the tab opens; the rest get one when something arrives. `n` starts a new DM (see Managing conversations). Not yet: unread only.
 
 ## Activity
 
@@ -395,6 +402,29 @@ Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter`
 - Typing fuzzy-matches channels, people and DMs right away. After a 200 ms pause, it also searches messages, adding a `Messages` section.
 - Slack's filter chips are rush's `barChip`s. `tab` focuses the chip row, and `space` toggles a chip.
 
+## Managing conversations
+
+```
+        ╭─ # Browse channels ──────────────────────────────────────────────╮
+        │ ❯ book▏                                                          │
+        │ ──────────────────────────────────────────────────────────────── │
+        │▍# bookclub  one chapter a fortnight                         7 ⊙  │
+        │ ↑↓ choose · enter preview · esc close                            │
+        ╰──────────────────────────────────────────────────────────────────╯
+
+  ╭ reading # bookclub · 7 members ──────────────────────────────────────╮
+  │  join   one chapter a fortnight                                      │
+  ╰ j or enter joins · esc back ─────────────────────────────────────────╯
+```
+
+- **Browse** (`b` in the sidebar, or `#` as the first thing typed in `ctrl+k`) lists the public channels you're not in, archived ones left out, with their purpose and member count. It's fetched when it opens (a page of 200 at a time, and kept for five minutes) and narrowed by fuzzy match as you type. `enter` reads the channel with no box and no sidebar entry: where the box goes is a green `join` chip, which `tab` (or `i`) reaches and `j` or `enter` presses. Joined, it lands in Channels and the box appears. Going elsewhere lets the preview go, and it isn't marked read.
+- **New message** (`N` in the sidebar, `n` in the DMs tab) is the same list over people, as `@` offers them. `enter` opens the DM with the highlighted person; `tab` picks several first (up to eight), and `enter` opens the group DM with them. A DM you already have just opens.
+- **Sections**: with the cursor on a heading (the sidebar stops on them), `z`, `space` or `enter` folds or unfolds it; `z` on a conversation does it for its section and leaves the cursor on the heading. `s` on a conversation opens a chooser of your sections (and its kind's own, to put it back); `*` stars it, which moves it to Starred, and again to unstar it.
+- **Mute**: `m` mutes or unmutes. Muted rows are faint, never bold, and don't count in the header or `ctrl+n`, nor notify.
+- **Leave**: `x` on a channel asks in the hint line (`y` leaves, anything else keeps it); on a DM or group DM it closes it, and it comes back when someone writes.
+
+Each applies at once and is sent to Slack in the background; if Slack says no, it's put back with the reason in the hint line (except a fold, which stays folded here). The websocket's `channel_joined`, `channel_left`, `im_close`, `pref_change` and `channel_section_*` events keep it in step with changes made elsewhere.
+
 ## Claude (needs rush)
 
 ```
@@ -432,7 +462,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 | key | does |
 |---|---|
-| `ctrl+k` (`/` in the sidebar) | jump to any conversation: what needs you, where you've just been and what's unread first, then fuzzy matching on everything. In the composer with text after the cursor, it cuts to the end of the line instead, as in rush |
+| `ctrl+k` (`/` in the sidebar) | jump to any conversation: what needs you, where you've just been and what's unread first, then fuzzy matching on everything; `#` first browses the channels you're not in. In the composer with text after the cursor, it cuts to the end of the line instead, as in rush |
 | `ctrl+n` | the next conversation that needs you: a mention, or anything new in a DM. The hint line shows `ctrl+n N need you` in yellow while there are any |
 | `ctrl+f` (`/` in the messages) | search messages; see Search below. From ctrl+k, it searches for what's typed there |
 | `alt+↑` `alt+↓` | the conversation above or below in the sidebar |
@@ -444,8 +474,9 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
+| `ctrl+end` | the open conversation's newest message, reading it (outside the thread, where it's the thread's newest) |
 
-**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits.
+**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits. Headings are stopped on. Managing it: `z` fold, `m` mute, `*` star, `s` move to a section, `x` leave or close, `b` browse channels, `N` new DM (see Managing conversations).
 
 **DMs, Activity and Later lists**: `↑↓` or `j k`, `pgup pgdn`, `g G`, `enter` opens it, and in Later `d` done and `x` remove. `tab` goes to the conversation beside them, and `esc` there comes back.
 
@@ -469,13 +500,14 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
 | `a` | ask Claude about it: the Claude tab, with it and five messages either side attached |
+| `b` `shift+b` | step through its buttons and menus; `enter` presses the chosen one, `esc` lets it go (Block Kit, above) |
 | `i` | write |
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
 Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
 
-**Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+**Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs, and the workspace's user groups by handle (`@bakers`, sent as `<!subteam^S123|@bakers>`; in messages a group reads as its handle). `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
 
 **Files**: `ctrl+o` in a box (the conversation's or a thread's) opens a prompt for a path, starting at `~/`. It lists what completes it as you type, dotfiles only once you type the dot. `↑↓` choose, `tab` completes (a folder, to look inside it), `enter` attaches what's typed, `esc` closes it. Pasting a path into the prompt works too. A path pasted into an empty box, which is what a terminal types for a file dropped on it (quoted, or with its spaces escaped, or several), asks `attach name?` in the box's top edge: `enter` attaches, any other key declines and the paste goes in as text. That's also what happens when it isn't a file. Attached files sit above the text as chips (`▤ name · size`), and `backspace` at the start of the box takes the last off. Each box has its own.
 
@@ -483,9 +515,13 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 On a message with files, `D` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
-**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
+**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji are 2-cell pictures where the terminal draws them, in text and reactions alike, and `:name:` in dim elsewhere or until they land. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 
 **Search**: a box over the screen, as ctrl+k's is. What's typed goes to Slack a quarter second after you stop, with Slack's modifiers as you type them (`in:#dev`, `from:@drew`, `before:2026-10-01`, `after:`, `is:thread`, `-word`), shown in blue. Opened from a conversation with nothing typed, it searches only there, as Slack's ⌘F does; `tab` switches between there and everywhere. Each result is its conversation, who and when, and a line or two with the matched words in orange (Slack's own marks, else the words you typed); replies say `↩ in a thread`. `↑↓` choose, `pgup pgdn` by five, and nearing the end fetches the next page. `enter` goes there with the cursor on it: at once if it's held, else after fetching the messages around it. A reply puts the cursor on its thread's parent and opens the thread with the cursor on the reply. Going past the newest from there (`↓`, `G`, `esc`) or sending fetches the newest again. `esc` closes it, and it opens again as it was left.
+
+**People**: `p` on a message (or anywhere in a DM) opens a card over the screen for who wrote it: name, what they go by and pronouns, title, presence, status emoji and text with when it runs out, their local time from their zone, email where the workspace shows it, and their picture where the terminal draws them (initials on a tinted block elsewhere). `enter` (or `m`) opens your DM with them, asking Slack to make one if there isn't, `y` copies `@handle`, `esc` closes it. It reads the store as it draws, so a status or presence change lands in it, and `users.info` is asked for when it opens.
+
+Presence is a dot on DMs in the sidebar, the DMs tab and a DM's header: `●` green while they're active, `○` faint when away, `●` dim until Slack has said. loafer sends `presence_sub` for the people in your DMs and the open conversation's authors, 100 ms after the last change, and applies `presence_change` (one user or a batch) and `manual_presence_change`. A flip redraws the dots and nothing else. A status emoji sits after the name in message headers, DM rows and a DM's header, and goes when it expires or is cleared; custom emoji statuses wait for images.
 
 **Thread**: the pane is the conversation's list and box over again, so the cursor and its keys (`↑↓`, `e`, `r`, `d d`, `c` `l`, `o`) work there as they do in the conversation, over the parent and its replies, and `a` asks Claude about the whole thread. It opens with its box focused. `tab` and `shift+tab` come round to it after the conversation's box; `esc` in its messages closes it, back on the parent, and `←` goes to the conversation. In its box, `enter` replies, `ctrl+b` ticks "also send to the channel" (it unticks once sent), and `esc` cancels an edit or goes to its messages. What's written in a thread's box stays with that thread when it's closed. Opening another conversation closes it.
 

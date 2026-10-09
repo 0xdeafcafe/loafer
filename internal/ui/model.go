@@ -44,6 +44,7 @@ type Model struct {
 	focus focus
 
 	side     []sideItem // the sidebar, flattened
+	every    []string   // every conversation in it, folded away or not
 	sideAt   int        // the selected item
 	sideTop  int        // first item shown
 	sideSeen uint64     // store version side was built from
@@ -60,6 +61,10 @@ type Model struct {
 	find      finder   // ctrl+f
 	th        threadPane
 	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
+	mg        manage   // sidebar management (manage.go)
+	br        browse   // the channel browser (browse.go)
+	ppl       peopleUI // presence, and the profile card (people.go)
+	kit       blockKit // Block Kit's buttons and modals (press.go, modal.go)
 	att       attachState
 
 	input    []rune
@@ -177,7 +182,7 @@ func (m *Model) markRead() tea.Cmd {
 	var ts string
 	m.st.Read(func(v store.View) {
 		c, w := v.Conv(m.open), v.Window(m.open)
-		if c != nil && w != nil && len(w.Msgs) > 0 && w.Msgs[len(w.Msgs)-1].TS > c.LastRead {
+		if c != nil && !c.Preview && w != nil && len(w.Msgs) > 0 && w.Msgs[len(w.Msgs)-1].TS > c.LastRead {
 			ts = w.Msgs[len(w.Msgs)-1].TS
 		}
 	})
@@ -254,6 +259,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd, ok := m.onPics(msg); ok {
 		return m, cmd
 	}
+	if cmd, ok := m.onProfile(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -264,6 +272,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.drawn.Clear()
 		m.claude.redraw()
 	case storeMsg:
+		m.syncModal()
 		m.st.Read(func(v store.View) {
 			if l := v.Link(); l != "" {
 				m.live = l
@@ -272,10 +281,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.hidden() {
 			return m, m.waitStore() // a workspace behind reads and fetches nothing
 		}
-		cmd := tea.Batch(m.waitStore(), m.fetchTabs())
-		if m.open != "" && m.scroll == 0 {
-			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
-		}
+		m.watchPeople()
+		cmd := tea.Batch(m.waitStore(), m.fetchTabs(), m.readIfWatching()) // watching it come in is reading it
 		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
 	case bootedMsg:
 		switch {
@@ -303,10 +310,12 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.say("couldn't open: "+msg.err.Error(), true)
 		}
 		if msg.conv == m.open {
-			return m, m.markRead()
+			return m, m.readIfWatching() // not if you've scrolled up meanwhile
 		}
 	case tabMsg:
 		return m, m.tabDone(msg)
+	case managedMsg, browsedMsg, dmMsg, joinedMsg:
+		return m, m.managed(msg)
 	case sentMsg:
 		if msg.err != nil {
 			return m, m.say("✗ couldn't send: "+msg.err.Error(), true)
@@ -316,6 +325,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
 		}
+	case pressedMsg, submittedMsg:
+		return m, m.pressed(msg)
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
@@ -330,7 +341,13 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case askedMsg, claudeMsg, caughtUpMsg, rushDoneMsg:
 		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
-		return m, m.alert(msg)
+		cmd := m.alert(msg)
+		if _, back := msg.(tea.FocusMsg); back {
+			cmd = tea.Batch(cmd, m.readIfWatching())
+		}
+		return m, cmd
+	case Draft:
+		return m, m.takeDraft(msg)
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""
@@ -358,11 +375,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inThread(func() { m.insert(msg.Content); m.refreshPop() })
 		}
 	case tea.MouseWheelMsg:
-		if msg.Button == tea.MouseWheelUp {
-			m.scroll += 3
-		} else {
-			m.scroll = max(0, m.scroll-3)
-		}
+		m.wheel(msg)
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
 	default:
@@ -391,6 +404,18 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
+	}
+	if (m.kit.pick.on || m.kit.md.on) && s != "ctrl+c" && s != "f12" {
+		return m.blockKey(k) // a modal is on top of everything, so it takes keys first
+	}
+	if m.mg.pk.kind != pickNone && s != "ctrl+c" && s != "f12" {
+		return m.pickKey(k)
+	}
+	if m.mg.ask != "" && s != "ctrl+c" && s != "f12" {
+		return m.askKey(s)
+	}
+	if m.ppl.card.on && s != "ctrl+c" && s != "f12" {
+		return m.cardKey(k)
 	}
 	if cmd, ok := m.attachKey(k, s); ok {
 		return cmd
@@ -451,6 +476,11 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.setTab(tabID(s[4] - '1'))
 	case "alt+c":
 		return m.claudeHere()
+	case "ctrl+end": // the conversation's newest, from anywhere but the thread
+		if m.focus < onThread && m.tabs.on != tabClaude {
+			cmd := m.pick(newest)
+			return tea.Batch(cmd, m.readIfWatching())
+		}
 	}
 	if m.tabs.on == tabClaude {
 		return m.claudeKey(k)
@@ -466,6 +496,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	case onThread, onReply:
 		return m.threadKey(k, s)
 	}
+	if m.isPreview() {
+		return m.previewKey(s)
+	}
 	cmd := m.composeKey(k, s)
 	m.refreshPop()
 	return cmd
@@ -474,6 +507,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 // setFocus moves focus to f; the message cursor starts on the newest
 // message, and goes when focus leaves.
 func (m *Model) setFocus(f focus) {
+	m.uncover(f)
 	m.threadFocus(f)
 	if f == onMsgs && m.focus != onMsgs && m.sel == "" { // after an edit, stay on what was edited
 		m.pick(by(-1))
@@ -485,6 +519,9 @@ func (m *Model) setFocus(f focus) {
 }
 
 func (m *Model) sideKey(s string) tea.Cmd {
+	if cmd, ok := m.manageKey(s); ok {
+		return cmd
+	}
 	switch s {
 	case "q":
 		return tea.Quit
@@ -519,6 +556,9 @@ func (m *Model) sideKey(s string) tea.Cmd {
 
 func (m *Model) msgsKey(s string) tea.Cmd {
 	page := max(1, m.h/6) // ponytail: messages a page, near enough
+	if cmd, ok := m.pressKey(s); ok {
+		return cmd
+	}
 	switch s {
 	case "up", "k":
 		return m.pick(by(-1))
@@ -574,6 +614,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
+	case "p":
+		return m.profile()
 	case "i":
 		m.setFocus(onCompose)
 	}
@@ -643,23 +685,10 @@ func (m *Model) composeKey(k tea.KeyPressMsg, s string) tea.Cmd {
 
 func (m *Model) insert(s string) { m.splice(m.cur, m.cur, []rune(s)) }
 
-// moveSide moves the sidebar selection d items, onto the nearest
-// conversation (headings aren't stopped on).
+// moveSide moves the sidebar selection d items; a heading is stopped on,
+// for z to fold it.
 func (m *Model) moveSide(d int) {
-	if len(m.side) == 0 {
-		return
-	}
-	i := min(max(m.sideAt+d, 0), len(m.side)-1)
-	dir := 1
-	if d < 0 {
-		dir = -1
-	}
-	for _, dir := range []int{dir, -dir} {
-		for j := i; j >= 0 && j < len(m.side); j += dir {
-			if m.side[j].conv != "" {
-				m.sideAt = j
-				return
-			}
-		}
+	if len(m.side) > 0 {
+		m.sideAt = min(max(m.sideAt+d, 0), len(m.side)-1)
 	}
 }

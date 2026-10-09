@@ -120,6 +120,21 @@ func inlinePic(url string) (canvas.Seg, bool) {
 	return picSeg(p, 0), true
 }
 
+// repliers is a thread's repliers as 1-cell avatars, the first few that
+// have landed, for the end of its "↩ N replies" line.
+func repliers(p *Palette, v store.View, users []string) canvas.Row {
+	r := canvas.Row{canvas.T("  ", p.Main.Text)}
+	for _, u := range users[:min(len(users), 5)] {
+		if pic, ok := picture(v.Person(u).Avatar, 1, 1); ok && pic.OK() {
+			r = append(r, picSeg(pic, 0))
+		}
+	}
+	if len(r) == 1 {
+		return nil
+	}
+	return r
+}
+
 // pictureRows is an image at url as rows up to w wide: the picture once
 // it's landed, else, while it's on its way and its size (iw by ih pixels)
 // is known, as many blank rows as it'll take, so nothing moves when it

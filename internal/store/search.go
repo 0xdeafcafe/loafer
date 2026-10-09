@@ -34,7 +34,7 @@ func (s *Store) Around(ctx context.Context, c *slack.Client, conv, ts string) er
 			w = &Window{}
 			s.windows[conv] = w
 		}
-		w.Msgs, w.More, w.Newer = msgs, more, newer
+		w.Msgs, w.More, w.Newer, w.stale = msgs, more, newer, false
 		s.touch(conv)
 	})
 	return nil

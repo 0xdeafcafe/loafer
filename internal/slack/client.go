@@ -37,7 +37,8 @@ type Client struct {
 	base    string // https://<domain>.slack.com/api/
 	creds   Creds
 	http    *http.Client
-	gateway string // Gateway as it was when the client was made
+	gateway string   // Gateway as it was when the client was made
+	pres    presence // who the websocket is asked about (people.go)
 }
 
 var inflight = obs.Gauge("api.inflight")
@@ -54,6 +55,9 @@ func New(c Creds) *Client {
 
 // Team is the workspace's name as it was signed in to.
 func (c *Client) Team() string { return c.creds.Team }
+
+// TeamID is the workspace's id as it was signed in to.
+func (c *Client) TeamID() string { return c.creds.TeamID }
 
 // Error is Slack's ok:false, or an HTTP failure.
 type Error struct {

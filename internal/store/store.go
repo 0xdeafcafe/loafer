@@ -27,6 +27,7 @@ type Store struct {
 	team     slack.Team
 	people   map[string]*Person
 	convs    map[string]*Conv
+	preview  *Conv // a channel being read before joining (manage.go)
 	sections []Section
 	emoji    map[string]string
 	windows  map[string]*Window
@@ -35,6 +36,8 @@ type Store struct {
 	names    uint64 // goes up when people or emoji change, which drawn messages show
 	link     string // the websocket: connecting, live or offline; "" before it's tried
 	tabs     tabs   // the DMs, Activity and Later lists (tabs.go)
+	folk     folk   // presence and user groups (presence.go, groups.go)
+	md       modals // apps' modals (modal.go)
 
 	booted atomic.Bool // a boot has got through
 	al     alertState  // notification rules and typing (alert.go)
@@ -107,6 +110,10 @@ func (s *Store) putConv(c slack.Conversation) {
 		s.convs[c.ID] = v
 	}
 	v.Name, v.User, v.Topic, v.Members = c.Name, c.User, c.Topic.Value, c.NumMembers
+	v.Muted = s.al.prefs.Muted(c.ID)
+	if s.preview != nil && s.preview.ID == c.ID {
+		s.preview = nil // joined
+	}
 	switch {
 	case c.IsIM:
 		v.Kind = IM
@@ -235,7 +242,7 @@ func (s *Store) SetWindow(conv string, newestFirst []slack.Message, more, older 
 		if older {
 			w.Msgs = append(msgs, w.Msgs...)
 		} else {
-			w.Msgs, w.Newer = msgs, false
+			w.Msgs, w.Newer, w.stale = msgs, false, false
 		}
 		w.More = more
 		s.touch(conv)
@@ -291,7 +298,7 @@ func (s *Store) Refresh(ctx context.Context, c *slack.Client, conv string) error
 		for i := len(msgs) - 1; i >= 0; i-- {
 			keep = append(keep, msgs[i])
 		}
-		w.Msgs, w.Newer = keep, false
+		w.Msgs, w.Newer, w.stale = keep, false, false
 		s.touch(conv)
 	})
 	return nil

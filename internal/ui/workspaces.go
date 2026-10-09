@@ -115,6 +115,12 @@ func (x *Multi) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "alt+w" && len(x.ws) > 1 {
 			return x, x.show(x.ws[(x.at+1)%len(x.ws)])
 		}
+	case Draft:
+		for i, m := range x.ws {
+			if m.teamID() == msg.Team {
+				return x, x.to(i, msg)
+			}
+		}
 	}
 	return x, x.to(x.at, msg)
 }
@@ -191,15 +197,15 @@ func (x *Multi) show(to *Model) tea.Cmd {
 	x.at = j
 	from.watch()           // behind now, so its open conversation notifies again
 	to.gate = frame.Gate{} // what it drew last is from before it went behind
-	return tag(j, to.shown())
+	return tag(j, to.front())
 }
 
 // hidden is whether the model is a workspace behind the one shown.
 func (m *Model) hidden() bool { return m.ws != nil && m.ws.x.ws[m.ws.x.at] != m }
 
-// shown is the model coming to the front: what's open is in front of you
+// front is the model coming to the front: what's open is in front of you
 // again, and one that booted behind opens its conversation now.
-func (m *Model) shown() tea.Cmd {
+func (m *Model) front() tea.Cmd {
 	m.watch()
 	if m.SignedOut() {
 		return m.say("slack signed you out of "+m.teamName()+" · run loafer login", true)
@@ -208,10 +214,16 @@ func (m *Model) shown() tea.Cmd {
 		m.st.Read(m.buildSide)
 		return m.openSelected()
 	}
-	if m.scroll == 0 {
-		return m.markRead() // what came in behind is read once it's seen
+	return m.readIfWatching() // what came in behind is read once it's seen
+}
+
+// teamID is the workspace's id, from boot or the cache, else the sign-in.
+func (m *Model) teamID() (id string) {
+	m.st.Read(func(v store.View) { id = v.Team().ID })
+	if id == "" && m.api != nil {
+		id = m.api.TeamID()
 	}
-	return nil
+	return id
 }
 
 // teamName is the workspace's name, from boot or the cache, else from

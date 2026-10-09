@@ -39,14 +39,14 @@ type Server struct {
 	convs    map[string]*conv
 	order    []string // conversation ids, as boot lists them
 	sections []slack.Section
+	prefs    map[string]string // users.prefs.set, and what boot lists (manage.go)
 	emoji    map[string]string
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
+	folk     folk  // presence, user groups (people.go)
 	files    map[string]*file
 	out      bool // signed out: every call is invalid_auth and the socket won't open
-
-	colour string // the sidebar theme's colour in boot's prefs, if set
 }
 
 type conv struct {
@@ -57,8 +57,9 @@ type conv struct {
 
 // New starts a server holding the workspace in workspace.go.
 func New() *Server {
-	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
+	s := &Server{prefs: map[string]string{}, convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	s.seed(time.Now())
+	s.seedPeople()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
 	mux.HandleFunc("/upload/", s.upload)
@@ -75,7 +76,11 @@ func NewTeam(id, name, colour string) *Server {
 	s := New()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.team.ID, s.team.Name, s.team.Domain, s.colour = id, name, strings.ToLower(id), colour
+	s.team.ID, s.team.Name, s.team.Domain = id, name, strings.ToLower(id)
+	if colour != "" {
+		theme, _ := jsonx.Marshal(map[string]string{"column_bg": colour})
+		s.prefs["sidebar_theme_custom_values"] = string(theme)
+	}
 	return s
 }
 
@@ -236,12 +241,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 				chans = append(chans, c.wire())
 			}
 		}
-		boot := map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims}
-		if s.colour != "" {
-			theme, _ := jsonx.Marshal(map[string]string{"column_bg": s.colour})
-			boot["prefs"] = map[string]string{"sidebar_theme_custom_values": string(theme)}
-		}
-		return boot, ""
+		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims, "prefs": s.prefs}, ""
 
 	case "client.counts":
 		var chans, mpims, ims []slack.Snapshot
@@ -352,6 +352,15 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		}
 		s.pushAny(map[string]any{"type": kind, "channel": ch, "ts": c.LastRead})
 		return map[string]any{}, ""
+	}
+	if out, code, ok := s.manage(method, f); ok {
+		return out, code
+	}
+	if out, code, ok := s.serveFolk(method, f); ok {
+		return out, code
+	}
+	if method == "blocks.actions" || method == "views.submit" {
+		return s.blocks(method, f)
 	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }
@@ -501,6 +510,8 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 			s.mu.Lock()
 			write(c, fmt.Appendf(nil, `{"type":"pong","reply_to":%d}`, ping.ID))
 			s.mu.Unlock()
+		} else {
+			s.frame(c, b)
 		}
 	}
 }

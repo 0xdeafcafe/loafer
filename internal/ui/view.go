@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -66,9 +67,16 @@ func (m *Model) render() []canvas.Row {
 		if m.find.on {
 			out = m.overlaySearch(v, out)
 		}
+		if m.mg.pk.kind != pickNone {
+			out = m.overlayPick(v, out)
+		}
+		if m.ppl.card.on {
+			out = m.overlayCard(v, out)
+		}
 		if m.att.ask.on {
 			out = m.overlayAttach(out)
 		}
+		out = m.overlayBlocks(v, out)
 	})
 	return out
 }
@@ -79,7 +87,7 @@ func (m *Model) header(v store.View) []canvas.Row {
 	ink := m.pal.Side
 	mentions, unread := 0, 0
 	for _, it := range m.side {
-		if c := v.Conv(it.conv); c != nil {
+		if c := v.Conv(it.conv); c != nil && !c.Muted {
 			mentions += c.Mentions
 			if c.Unread {
 				unread++
@@ -125,27 +133,39 @@ type sideItem struct {
 	conv    string // "" for a section heading
 	section string
 	emoji   string
+	id      string // a heading's section
+	folded  bool   // a heading's, and how many it hides
+	hidden  int
+}
+
+// key is what keeps the selection on its item through a rebuild.
+func (it sideItem) key() string {
+	if it.conv != "" {
+		return it.conv
+	}
+	return "#" + it.id
 }
 
 func (m *Model) buildSide(v store.View) {
-	sel := ""
-	if m.sideAt < len(m.side) {
-		sel = m.side[m.sideAt].conv
+	sel, was := "", m.sideAt
+	if m.sideAt < len(m.side) && m.open != "" { // until something's open, the first conversation
+		sel = m.side[m.sideAt].key()
 	}
-	m.side = m.side[:0]
+	m.side, m.every = m.side[:0], m.every[:0]
 	for _, sec := range v.Sidebar() {
-		m.side = append(m.side, sideItem{section: sec.Name, emoji: sec.Emoji})
-		for _, id := range sec.Convs {
+		ids, hidden := m.shown(v, sec)
+		m.side = append(m.side, sideItem{section: sec.Name, emoji: sec.Emoji, id: sec.ID, folded: sec.Collapsed, hidden: hidden})
+		m.every = append(m.every, sec.Convs...)
+		for _, id := range ids {
 			m.side = append(m.side, sideItem{conv: id, section: sec.Name})
 		}
 	}
-	m.sideAt = 0
-	for i, it := range m.side {
-		if (sel == "" && it.conv != "") || (sel != "" && it.conv == sel) {
-			m.sideAt = i
-			if sel != "" || it.conv != "" {
-				break
-			}
+	// Where it was, else the same place in the list, else the first conversation.
+	m.sideAt = slices.IndexFunc(m.side, func(it sideItem) bool { return it.key() == sel })
+	if m.sideAt < 0 {
+		m.sideAt = max(0, min(was, len(m.side)-1))
+		if sel == "" {
+			m.sideAt = max(0, slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv != "" }))
 		}
 	}
 }
@@ -169,17 +189,7 @@ func (m *Model) sidebar(v store.View, w, h int) []canvas.Row {
 					break
 				}
 			}
-			name := it.section
-			if it.emoji != "" {
-				if e, std := emojiText(strings.Trim(it.emoji, ":")); std {
-					name = e + " " + name
-				}
-			}
-			head := canvas.Row{canvas.T(" ▾ ", ink.Faint), canvas.T(name+" ", ink.Sub.With(canvas.Bold))}
-			if fill := w - head.Width(); fill > 0 {
-				head = append(head, canvas.T(strings.Repeat("─", fill), ink.Faint))
-			}
-			rows = append(rows, canvas.Fit(head, w, ink.Text))
+			rows = append(rows, m.sideHead(it, w, i == m.sideAt))
 			continue
 		}
 		c := v.Conv(it.conv)
@@ -208,26 +218,31 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 		}
 		name = name.Bg(base.BG)
 	}
-	glyph := "#"
+	glyph, glyphFG := "#", ink.Dim.FG
 	switch c.Kind {
 	case store.Private:
 		glyph = "⊡"
 	case store.IM:
-		glyph = "●"
-		if v.Person(c.User).Bot {
-			glyph = "◇"
-		}
+		glyph, glyphFG = dmMark(v, c, ink, m.pal.SideGreen)
 	case store.MPIM:
 		glyph = "⁂"
 	}
-	if c.Unread {
+	if c.Unread && !c.Muted {
 		name = ink.Bright.Bg(base.BG).With(canvas.Bold)
+	}
+	if c.Muted {
+		name = ink.Faint.Bg(base.BG)
 	}
 	mark := canvas.T(" ", base)
 	if selected {
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
-	left := canvas.Row{mark, canvas.T(" "+glyph+" ", name.With(0).Fg(ink.Dim.FG)), canvas.T(v.Title(c), name)}
+	left := canvas.Row{mark, canvas.T(" "+glyph+" ", name.With(0).Fg(glyphFG)), canvas.T(v.Title(c), name)}
+	if c.Kind == store.IM {
+		if g := statusGlyph(v, c.User); g != "" {
+			left = append(left, canvas.T(" "+g, name.With(0)))
+		}
+	}
 	var right canvas.Row
 	if c.Mentions > 0 {
 		right = canvas.Row{canvas.T("@"+strconv.Itoa(c.Mentions)+" ", m.pal.SideYellow.Bg(base.BG).With(canvas.Bold))}
@@ -261,14 +276,20 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	if c.Topic != "" {
 		title = append(title, canvas.T("   "+firstLine(c.Topic), m.pal.Panel.Fg(ink.Dim.FG)))
 	}
+	if c.Kind == store.IM {
+		title = m.dmTitle(v, c)
+	}
 	head := []canvas.Row{canvas.Fit(title, w, m.pal.Panel), canvas.Fit(nil, w, ink.Text)}
 
 	box := m.composer(v, c, w, min(6, max(1, h-len(head)-3)))
+	if c.Preview {
+		box = m.joinBar(c, w)
+	}
 	if t := m.typingRow(v, w); t != nil {
 		box = append(t, box...)
 	}
 	listH := max(0, h-len(head)-len(box))
-	list := m.overlayPop(m.messages(v, c, w, listH), w)
+	list := m.overlayPop(m.newerPill(v, c, m.messages(v, c, w, listH), w), w)
 	return append(append(head, list...), box...)
 }
 
@@ -409,14 +430,16 @@ func (m *Model) hints(v store.View) canvas.Row {
 	}
 	var pairs [][2]string
 	switch {
+	case m.previewing(v) && m.focus != onSide:
+		pairs = m.previewHints()
 	case m.focus >= onThread:
 		pairs = m.threadHints()
 	case m.tabs.on != tabHome && (m.focus == onSide || m.tabs.on == tabClaude):
 		pairs = m.tabHints()
 	case m.focus == onSide:
-		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"b N", "browse, new dm"}, {"z m s x", "fold mute move leave"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":

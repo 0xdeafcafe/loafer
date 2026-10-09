@@ -150,6 +150,10 @@ func (m *Model) tabKey(s string) tea.Cmd {
 		if m.tabs.on == tabLater {
 			return m.finish(s == "d")
 		}
+	case "n":
+		if m.tabs.on == tabDMs {
+			return m.openNewDM()
+		}
 	}
 	return nil
 }
@@ -244,7 +248,7 @@ func (m *Model) finish(done bool) tea.Cmd {
 func (m *Model) tabHints() [][2]string {
 	switch m.tabs.on {
 	case tabDMs:
-		return [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
+		return [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "new"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
 	case tabActivity:
 		return [][2]string{{"↑↓", "move"}, {"enter", "go to it"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
 	case tabLater:
@@ -420,12 +424,9 @@ func (m *Model) dmRows(v store.View, conv string, w int, now time.Time) []canvas
 	if c == nil {
 		return []canvas.Row{canvas.Fit(nil, w, ink.Text)}
 	}
-	glyph := "● "
-	switch {
-	case c.Kind == store.MPIM:
-		glyph = "⁂ "
-	case v.Person(c.User).Bot:
-		glyph = "◇ "
+	glyph, glyphFG := "⁂", ink.Dim.FG
+	if c.Kind != store.MPIM {
+		glyph, glyphFG = dmMark(v, c, ink, m.pal.Green)
 	}
 	name := ink.Text
 	if c.Unread {
@@ -435,7 +436,11 @@ func (m *Model) dmRows(v store.View, conv string, w int, now time.Time) []canvas
 	if c.Latest != "" {
 		right = canvas.Row{canvas.T(" "+when(tsTime(c.Latest), now)+" ", ink.Dim)}
 	}
-	top := rightAlign(canvas.Row{canvas.T(" ", ink.Text), canvas.T(" "+glyph, ink.Dim), canvas.T(v.Title(c), name)}, right, w, ink.Text)
+	left := canvas.Row{canvas.T(" ", ink.Text), canvas.T(" "+glyph+" ", ink.Text.Fg(glyphFG)), canvas.T(v.Title(c), name)}
+	if g := statusGlyph(v, c.User); g != "" && c.Kind == store.IM {
+		left = append(left, canvas.T(" "+g, ink.Text))
+	}
+	top := rightAlign(left, right, w, ink.Text)
 	preview := ""
 	if msg, ok := v.LastMsg(conv); ok {
 		preview = firstLine(plainText(v, msg.Text))

@@ -32,6 +32,8 @@ const (
 	PriyaDM  = "D0PRIYA"
 	JoDM     = "D0JO"
 	DeployDM = "D0DEPLOY"
+	Books    = "C0BOOKS" // a channel you're not in
+	Old      = "C0OLD"   // an archived one
 )
 
 func (s *Server) seed(now time.Time) {
@@ -171,7 +173,24 @@ func (s *Server) seed(now time.Time) {
 	fill(JoDM, 90*time.Minute, 0, say(Self, "pushed the fix"), say(Jo, "ta"))
 	deployed := say(DeployBot, "your deploy to *staging* finished in 2m 14s")
 	deployed.BotID = "B0DEPLOY"
-	fill(DeployDM, 19*time.Minute, 0, deployed)
+	ask := say(DeployBot, "loafer@4f2a9c1 is waiting to go to production")
+	ask.BotID, ask.AppID = "B0DEPLOY", "A0DEPLOY"
+	ask.Blocks = []byte(`[{"type":"section","block_id":"ask","text":{"type":"mrkdwn","text":"*loafer@4f2a9c1* is waiting to go to production"}},
+	 {"type":"actions","block_id":"go","elements":[
+	  {"type":"button","action_id":"review","style":"primary","text":{"type":"plain_text","text":"Review"},"value":"4f2a9c1"},
+	  {"type":"button","action_id":"hold","text":{"type":"plain_text","text":"Not today"},"value":"hold"},
+	  {"type":"overflow","action_id":"more","options":[{"text":{"type":"plain_text","text":"see the diff"},"value":"diff"},
+	   {"text":{"type":"plain_text","text":"page whoever's on call"},"value":"page"}]}]}]`)
+	fill(DeployDM, 19*time.Minute, 0, deployed, ask)
+
+	// Channels you're not in: they're in conversations.list, not in boot.
+	for _, c := range []slack.Conversation{
+		{ID: Books, Name: "bookclub", IsChannel: true, NumMembers: 7, Purpose: slack.Text{Value: "one chapter a fortnight"}},
+		{ID: Old, Name: "old-launch", IsChannel: true, IsArchived: true, NumMembers: 3},
+	} {
+		s.convs[c.ID] = &conv{Conversation: c, replies: map[string][]slack.Message{}}
+	}
+	fill(Books, 3*time.Hour, 0, say(Jo, "chapter four is the one with the bakery"), say(Priya, "I'm behind, no spoilers"))
 
 	s.last = now.UnixMicro()
 }

@@ -102,15 +102,9 @@ func (m *Model) recent() []string {
 	return out
 }
 
-func (m *Model) sideConvs() []string {
-	out := make([]string, 0, len(m.side))
-	for _, it := range m.side {
-		if it.conv != "" {
-			out = append(out, it.conv)
-		}
-	}
-	return out
-}
+// sideConvs is every conversation in the sidebar, those folded out of
+// sight too. It's rebuilt with the sidebar; don't keep or change it.
+func (m *Model) sideConvs() []string { return m.every }
 
 // jumpTitle is what the query is matched against: the name, without
 // convLabel's glyph.
@@ -155,6 +149,10 @@ func (m *Model) jumpKey(k tea.KeyPressMsg) tea.Cmd {
 		j.query = j.query[:0]
 		m.st.Read(m.buildJump)
 	default:
+		if k.Text == "#" && len(j.query) == 0 { // # browses the channels you're not in
+			j.on = false
+			return m.openBrowse()
+		}
 		if k.Text != "" {
 			j.query = append(j.query, []rune(k.Text)...)
 			m.st.Read(m.buildJump)
@@ -215,7 +213,7 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 	for _, r := range rows[from:min(len(rows), from+listH)] {
 		box = append(box, line(r))
 	}
-	box = append(box, edgeRow("╰", "↑↓ choose · enter go · ctrl+f messages · esc close", "╯"))
+	box = append(box, edgeRow("╰", "↑↓ choose · enter go · # browse · ctrl+f messages · esc close", "╯"))
 
 	out := make([]canvas.Row, len(frame))
 	for i, r := range frame {
