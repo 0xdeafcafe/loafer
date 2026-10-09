@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,9 +38,9 @@ func draftSock() string {
 	return filepath.Join(d, "loafer", "draft.sock")
 }
 
-// listenDrafts hands drafts for team's conversations to send until stop.
+// listenDrafts hands drafts for the open workspaces' conversations to send until stop.
 // A second loafer leaves the first the socket.
-func listenDrafts(team string, send func(tea.Msg)) (stop func()) {
+func listenDrafts(teams []string, send func(tea.Msg)) (stop func()) {
 	path := draftSock()
 	if c, err := net.Dial("unix", path); err == nil {
 		c.Close()
@@ -62,16 +63,16 @@ func listenDrafts(team string, send func(tea.Msg)) (stop func()) {
 			if err != nil {
 				return
 			}
-			go serveDraft(c, team, send)
+			go serveDraft(c, teams, send)
 		}
 	}()
 	return func() { l.Close() }
 }
 
-func serveDraft(c net.Conn, team string, send func(tea.Msg)) {
+func serveDraft(c net.Conn, teams []string, send func(tea.Msg)) {
 	defer c.Close()
 	_ = c.SetDeadline(time.Now().Add(10 * time.Second))
-	err := takeDraft(c, team, send)
+	err := takeDraft(c, teams, send)
 	if err != nil {
 		fmt.Fprintln(c, err.Error())
 		return
@@ -79,7 +80,7 @@ func serveDraft(c net.Conn, team string, send func(tea.Msg)) {
 	fmt.Fprintln(c, "ok")
 }
 
-func takeDraft(r io.Reader, team string, send func(tea.Msg)) error {
+func takeDraft(r io.Reader, teams []string, send func(tea.Msg)) error {
 	b, err := io.ReadAll(io.LimitReader(r, maxDraft+4<<10))
 	if err != nil {
 		return err
@@ -88,15 +89,15 @@ func takeDraft(r io.Reader, team string, send func(tea.Msg)) error {
 	switch {
 	case jsonx.Unmarshal(b, &d) != nil:
 		return errors.New("that isn't a draft")
-	case d.Team != team:
-		return errors.New("loafer has another workspace open")
+	case !slices.Contains(teams, d.Team):
+		return errors.New("loafer hasn't that workspace open")
 	case d.Conv == "":
 		return errors.New("no conversation")
 	case len(d.Text) > maxDraft:
 		return errors.New("the draft is too long for one message")
 	}
 	done := make(chan error, 1)
-	send(ui.Draft{Conv: d.Conv, Thread: d.Thread, Text: d.Text, Done: done})
+	send(ui.Draft{Team: d.Team, Conv: d.Conv, Thread: d.Thread, Text: d.Text, Done: done})
 	select {
 	case err := <-done:
 		return err

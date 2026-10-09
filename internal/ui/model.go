@@ -76,8 +76,12 @@ type Model struct {
 	editing  string           // the message the composer is changing
 	deleting string           // the message d was pressed on once
 
-	al     alerts // notifications and the typing line (alerts.go)
-	claude claude // the Claude tab (claude.go)
+	al     alerts  // notifications and the typing line (alerts.go)
+	claude claude  // the Claude tab (claude.go)
+	acts   actions // the . menu and what it does (actions.go)
+
+	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
+	wash washCache // the header's wash (wash.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -158,7 +162,7 @@ func (m *Model) openConv(id string) tea.Cmd {
 		m.keep(m.open)
 	}
 	m.restore(id)
-	m.open, m.scroll, m.sel, m.deleting = id, 0, "", ""
+	m.open, m.scroll, m.sel, m.deleting, m.acts.unread = id, 0, "", "", ""
 	m.watch()
 	if i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id }); i >= 0 {
 		m.sideAt = i
@@ -177,6 +181,9 @@ func (m *Model) openConv(id string) tea.Cmd {
 // markRead moves the open conversation's read marker to its newest
 // message, here at once and at Slack in the background.
 func (m *Model) markRead() tea.Cmd {
+	if m.acts.unread == m.open {
+		return nil // marked unread by hand, and stays so
+	}
 	var ts string
 	m.st.Read(func(v store.View) {
 		c, w := v.Conv(m.open), v.Window(m.open)
@@ -276,6 +283,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
+		if m.hidden() {
+			return m, m.waitStore() // a workspace behind reads and fetches nothing
+		}
 		m.watchPeople()
 		cmd := tea.Batch(m.waitStore(), m.fetchTabs(), m.readIfWatching()) // watching it come in is reading it
 		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
@@ -291,7 +301,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.listen(), m.say("couldn't reach Slack: "+msg.err.Error(), true))
 		}
 		cmd := m.listen()
-		if m.open == "" && len(m.side) > 0 {
+		if m.open == "" && len(m.side) > 0 && !m.hidden() {
 			cmd = tea.Batch(cmd, m.openSelected())
 		}
 		return m, cmd
@@ -320,6 +330,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
 		}
+	case actedMsg:
+		return m, m.acted(msg)
 	case pressedMsg, submittedMsg:
 		return m, m.pressed(msg)
 	case olderMsg:
@@ -396,6 +408,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.emo.pick.on && s != "ctrl+c" && s != "f12" {
 		return m.reactKey(k)
+	}
+	if m.acts.menu.on && s != "ctrl+c" && s != "f12" {
+		return m.menuKey(k)
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
@@ -609,6 +624,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
+	case ".", "u", "s", "P", "m":
+		return m.actKey(s)
 	case "p":
 		return m.profile()
 	case "i":

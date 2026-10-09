@@ -52,6 +52,7 @@ type Team struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
+	Colour string `json:"loafer_colour,omitempty"` // not Slack's: ThemeColour of boot's prefs, kept in the cache
 }
 
 func (c *Client) UserBoot(ctx context.Context) (UserBoot, error) {
@@ -198,6 +199,7 @@ type Message struct {
 	ReplyUsers  []string       `json:"reply_users"`
 	LatestReply string         `json:"latest_reply"`
 	Edited      *struct{}      `json:"edited"`
+	PinnedTo    []string       `json:"pinned_to"` // the conversations it's pinned in
 	Reactions   []Reaction     `json:"reactions"`
 	Blocks      jsontext.Value `json:"blocks"`
 	Attachments jsontext.Value `json:"attachments"`

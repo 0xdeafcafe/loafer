@@ -215,6 +215,19 @@ func (s *Store) Apply(ev slack.Event) {
 			s.update(func() { delete(s.convs, e.Channel); s.side++ })
 		}
 
+	case "pin_added", "pin_removed":
+		var e struct {
+			Channel string `json:"channel_id"`
+			Item    struct {
+				Message struct {
+					TS string `json:"ts"`
+				} `json:"message"`
+			} `json:"item"`
+		}
+		if jsonx.Unmarshal(ev.Raw, &e) == nil && e.Item.Message.TS != "" {
+			s.SetPinned(e.Channel, e.Item.Message.TS, ev.Type == "pin_added")
+		}
+
 	case "pref_change", "dnd_updated", "user_typing":
 		s.applyAlert(ev)
 

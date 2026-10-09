@@ -41,6 +41,7 @@ type Server struct {
 	sections []slack.Section
 	prefs    map[string]string // users.prefs.set, and what boot lists (manage.go)
 	emoji    map[string]string
+	saved    []slack.SavedItem
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
@@ -79,6 +80,21 @@ func start(big bool) *Server {
 	return s
 }
 
+// NewTeam starts a second workspace beside New's: the same people and
+// conversations under another team id and name, with colour ("#rrggbb",
+// or "") as your sidebar theme there.
+func NewTeam(id, name, colour string) *Server {
+	s := New()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.team.ID, s.team.Name, s.team.Domain = id, name, strings.ToLower(id)
+	if colour != "" {
+		theme, _ := jsonx.Marshal(map[string]string{"column_bg": colour})
+		s.prefs["sidebar_theme_custom_values"] = string(theme)
+	}
+	return s
+}
+
 // Close hangs up the sockets and stops the server.
 func (s *Server) Close() {
 	s.mu.Lock()
@@ -95,8 +111,9 @@ func (s *Server) Creds() slack.Creds {
 		Token: "xoxc-slacktest", Cookie: "xoxd-slacktest"}
 }
 
-// Client is a client for the server. It points slack.Gateway here too, so
-// only one server's websocket can be listened to at a time.
+// Client is a client for the server, its websocket included. The client
+// keeps the gateway it was made with, so two servers can be listened to
+// at once.
 func (s *Server) Client() *slack.Client {
 	slack.Gateway = "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	return slack.New(s.Creds())
@@ -117,6 +134,13 @@ func (s *Server) Messages(channel string) []slack.Message {
 		return slices.Clone(c.msgs)
 	}
 	return nil
+}
+
+// Saved is what's saved for later, newest first.
+func (s *Server) Saved() []slack.SavedItem {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.saved)
 }
 
 // Push sends event, raw JSON, to every open socket.
@@ -335,6 +359,52 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		s.remove(ch, ts)
 		return map[string]any{"channel": ch, "ts": ts}, ""
 
+	case "pins.add", "pins.remove":
+		m := s.find(ch, f.Get("timestamp"))
+		if m == nil {
+			return nil, "message_not_found"
+		}
+		pinned := slices.Contains(m.PinnedTo, ch)
+		switch {
+		case method == "pins.add" && pinned:
+			return nil, "already_pinned"
+		case method == "pins.remove" && !pinned:
+			return nil, "no_pin"
+		case pinned:
+			m.PinnedTo = slices.DeleteFunc(m.PinnedTo, func(c string) bool { return c == ch })
+		default:
+			m.PinnedTo = append(m.PinnedTo, ch)
+		}
+		kind := "pin_added"
+		if pinned {
+			kind = "pin_removed"
+		}
+		s.pushAny(map[string]any{"type": kind, "channel_id": ch, "item": map[string]any{"type": "message", "message": map[string]any{"ts": m.TS}}})
+		return map[string]any{}, ""
+
+	case "saved.list":
+		return map[string]any{"saved_items": s.saved}, ""
+
+	case "saved.add", "saved.update", "saved.delete":
+		id, ts := f.Get("item_id"), f.Get("ts")
+		due, _ := strconv.ParseInt(f.Get("date_due"), 10, 64)
+		at := slices.IndexFunc(s.saved, func(x slack.SavedItem) bool { return x.ID == id && x.TS == ts })
+		switch {
+		case method == "saved.add" && at >= 0:
+			return nil, "already_saved"
+		case method == "saved.add":
+			s.saved = slices.Insert(s.saved, 0, slack.SavedItem{Type: f.Get("item_type"), ID: id, TS: ts, DateDue: due, State: "in_progress"})
+		case at < 0:
+			return nil, "item_not_found"
+		case method == "saved.delete":
+			s.saved = slices.Delete(s.saved, at, at+1)
+		default:
+			if due > 0 {
+				s.saved[at].DateDue = due
+			}
+		}
+		return map[string]any{}, ""
+
 	case "files.getUploadURLExternal", "files.completeUploadExternal":
 		return s.uploads(method, f)
 
@@ -343,9 +413,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 			return nil, "channel_not_found"
 		}
 		ts := f.Get("ts")
-		if ts > c.LastRead {
-			c.LastRead = ts
-		}
+		c.LastRead = ts // backwards too: that's mark unread
 		kind := "channel_marked"
 		switch {
 		case c.IsIM:

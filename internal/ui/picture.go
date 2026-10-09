@@ -33,7 +33,10 @@ type picsMsg struct{}
 // startPics starts pictures where the terminal draws them, asking it its
 // cell size so they keep their shape.
 func (m *Model) startPics() tea.Cmd {
-	if m.api == nil || !termimg.Drawn() {
+	// shortcut: every workspace's pictures are fetched with the first's
+	// client; the d cookie is the browser's, shared by its workspaces, but
+	// one signed in from another browser misses its files' pictures.
+	if m.api == nil || !termimg.Drawn() || m.ws != nil && m.ws.i > 0 {
 		return nil
 	}
 	pics = images.New(m.ctx, m.api.Fetch, images.Dir())

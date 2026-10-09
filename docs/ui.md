@@ -13,7 +13,7 @@ Slack's layout and features, drawn in rush's visual language. If a Slack element
    - red: failure, danger buttons, delete, overdue
    - lavender: drafts and scheduled
    - Slack's attachment colours are an exception: they're content, drawn as a narrow `▌` bar mapped through `theme.Accent` so they stay readable on any ground.
-2a. **Workspace colour.** The workspace's sidebar theme colour (aubergine for LangWatch) is the ground of the header, the tab row and the sidebar pane; the message, thread and overlay panes keep rush's ground. The header also gets rush's static gradient wash toward the right, ramping into the same colour. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
+2a. **Workspace colour.** Slack's aubergine is the ground of the header, the tab row and the sidebar pane, whichever workspace it is; the message, thread and overlay panes keep rush's ground. The workspace's own colour is in the header's static gradient wash (rush's): plain for the first 60% of the width, then ramping in four-cell steps into it at the right edge, held back wherever the header's text would stop reading. That colour is your sidebar theme's in that workspace, if you gave it one (an uncertain pref, see slack-webapp-methods.md), else one of a few dark theme colours picked by a hash of the team id, so it's the same every time. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
 3. **Bold is for what wants you**: unread channel names, mention counts, author names, section titles, key names in hints. Read things are plain; muted things are faint.
 4. **No borders around content.** Hierarchy comes from greys, one-row gaps and fills. Rounded boxes only for things you type into and things floating over the screen: the composer, ctrl+k, modals and menus.
 5. **Every list row has a marker column** and the same selection: a `selBG` fill plus an orange `▍` in column 0. Hover is `hoverBG`.
@@ -138,7 +138,8 @@ Notes:
 - **Header**, two rows plus a rule. When the terminal is 100 columns or wider, the logo (below) sits to the left of those two rows, and the header grows to 4 rows, as rush's does. Mockups below omit it.
   - Row 1: the wordmark (bold italic `loafer`, as rush does), the workspace, the state counts in rush's header style, and connection state on the right.
   - Row 2: Slack's left rail as rush's top tabs. The active one is a filled chip; badges are `·N`, yellow when they're mentions.
-  - The header, tab row and sidebar sit on the workspace colour (rule 2a). The header also gets rush's static gradient wash toward the right edge, ramping into that colour.
+  - The header, tab row and sidebar sit on the aubergine, and the header's wash ramps into the workspace's colour toward the right edge (rule 2a).
+- **Workspace rail**, only when you're signed in to more than one: four columns down the far left, a step darker than the sidebar. Each workspace is its initials on its colour (`CC` for Crumb & Co, `La` for LangWatch), the one shown marked with the orange `▍`, and under them its mentions (`@2` in yellow, `@+` past nine), else `•` when anything's unread, or a red `✗` once it's signed out.
 - **Sidebar** = rush's list pane.
   - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. A folded section is `▸ name 3 ──────` with how many it hides, and still lists what has unread, what mentions you and the conversation that's open. Not yet: quiet folded sections joined into one `▸ Social · Product · 3 more` line.
   - Rows: unread names are bright and bold, read ones plain sub, muted ones faint (and not counted in the header or by `ctrl+n`). On the right, the unread count is dim, and mentions are `@2` in yellow bold.
@@ -274,20 +275,31 @@ Mentions inside text:
 ### Message actions menu (`.`)
 
 ```
-                                        ╭─────────────────────────────────╮
-                                        │  ☺ react                      r │
-                                        │  ↩ reply in thread            t │
-                                        │  ◆ save for later             s │
-                                        │  ◷ remind me              ▸     │
-                                        │  ● mark unread                u │
-                                        │  ⧉ copy link                  l │
-                                        │  ⧉ copy text                  c │
-                                        │  ✎ edit                       e │
-                                        │  ✗ delete                   del │
-                                        ╰─────────────────────────────────╯
+                                        ╭─ Actions ────────────────────────╮
+                                        │ ▍ ☺ react                     r  │
+                                        │   ↩ reply in thread           t  │
+                                        │   ◇ ask Claude                a  │
+                                        │   ◆ save for later            s  │
+                                        │   ◷ remind me ▸               m  │
+                                        │   ⚑ pin                       P  │
+                                        │   ● mark unread from here     u  │
+                                        │   ⧉ copy link                 l  │
+                                        │   ⧉ copy text                 c  │
+                                        │   ↗ open link                 o  │
+                                        │   ✎ edit                      e  │
+                                        │   ✗ delete                    d  │
+                                        ╰─ ↑↓ · enter · esc ───────────────╯
 ```
 
-The menu is anchored at the selected message, on the right. Its keys also work without opening it. Delete is red and asks for confirmation through rush's confirm.
+The menu floats over the right of the conversation, with the rest gone faint. `↑↓` and `enter` choose, an item's own key does it at once, `esc` closes. Every key works without opening it, so the menu is how you learn them. It lists only what applies: edit and delete are yours only, open link needs a link, and the thread pane's menu has no reply in thread or mark unread. Delete is red and works as `d d` does: the menu's `d` is the first press.
+
+- **Copy text and open link** use what's drawn, blocks, rich text, attachments and files included (not the fallback text Slack keeps for notifications), the same renderer laid out wide so nothing wraps. The bars and the code's language tag are left out. Open link takes the first http, https or mailto link in it, a button's included.
+- **Save for later** (`s`) puts the message on the Later list, and the menu then says `remove from later`. Whether it's there is only known once the list has been fetched, so the first `.` or `s` fetches it. A message with files also lists `download files` (`D`).
+- **Remind me** (`m`) is a small chooser: `1` in 20 minutes, `2` in 1 hour, `3` in 3 hours, `4` tomorrow at 9, `5` next week (Monday, at 9), each with its time. It saves the message for later with a due time, as Slack's own "remind me about this" does now, so it shows in Later as due; a message already saved just gets the new time.
+- **Pin** (`P`) pins it for the conversation, or unpins. A pinned message has a dim `⚑ pinned` line under it, and pins from other devices arrive live.
+- **Mark unread from here** (`u`) moves the read marker to the message before it, so it and everything after are unread, in the sidebar too, and the `new` line moves to it. It stays that way (watching new messages arrive doesn't read it) until the conversation is opened again. Not in threads.
+
+Saves, pins and marks change here at once and are put back if Slack refuses.
 
 ## DMs
 
@@ -365,7 +377,7 @@ The composer collapses to a single row until it's focused. Forwarded messages an
     ╰ Can you send me a copy of your current 30% ruling beschikking…
 ```
 
-Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter` goes to the message, `d` marks it done and `x` takes it off the list. Not yet: the archived and completed lists, archiving and reminders.
+Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter` goes to the message, `d` marks it done and `x` takes it off the list. Not yet: the archived and completed lists, and archiving. Reminders are set from a message (`m`).
 
 ## ctrl+k: jump and search
 
@@ -469,6 +481,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `alt+←` `alt+→` | back and forward through the conversations you've visited |
 | `alt+1` … `alt+5` | the tabs: Home, DMs, Activity, Later, Claude. A tab's list is fetched the first time it opens |
 | `alt+c` | the Claude tab, with the open conversation attached |
+| `alt+w` | the next workspace, when you're signed in to more than one. Each keeps its place (what's open, drafts, scroll), so it's instant. ctrl+k lists the others too, under `Workspaces`, and typing matches their names |
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
@@ -491,9 +504,14 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `r` | react: a picker over every emoji, yours and the usual ones first. `enter` adds it, or takes it away if it's already yours (marked ✓) |
 | `1`-`9` | toggle the message's nth reaction, in the order they're drawn |
 | `d d` or `delete delete` | bin it, if it's yours |
-| `c` `l` | copy its text, copy a link to it |
-| `o` | open its first link (http, https and mailto only) |
+| `.` | the actions menu: everything here, with its key |
+| `c` `l` | copy its text as it's drawn, blocks and attachments included; copy a link to it |
+| `o` | open its first link, as drawn (http, https and mailto only) |
 | `D` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
+| `s` | save for later, or take it off Later |
+| `m` | remind me: in 20 minutes, 1 hour, 3 hours, tomorrow at 9 or next week |
+| `P` | pin it, or unpin it |
+| `u` | mark unread from here |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
@@ -525,7 +543,7 @@ Presence is a dot on DMs in the sidebar, the DMs tab and a DM's header: `●` gr
 
 **Claude**: the box has the keys when the tab opens. With nothing asked yet, `↑↓` choose a starter (summarise, draft a reply, catch me up) and `enter` runs it; type and `enter` asks instead. `backspace` at the start of the box takes the last chip off. The answer streams in and has the keys once it's done: `i` puts it into its conversation's composer as a draft (after what's there, never sent), `↑↓` `pgup pgdn` scroll, and `enter` or typing goes back to the box. A follow-up goes to the same session; `alt+n` starts a new one, `ctrl+o` opens it in rush (`rush open <id> --hosted`, `ctrl+q` comes back), and `esc` goes from the box to the answer, then Home.
 
-Not yet: save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
+Not yet: a saved marker on messages, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
 
@@ -534,13 +552,13 @@ Status flashes go in the hint line for 6 s, as in rush. Examples: `sent`, `copie
 The connection state lives in header row 1:
 - `● live` in green
 - `◌ reconnecting 3s` in yellow
-- signed out, loafer closes and asks you to sign in again, then reopens
+- signed out, loafer closes and asks you to sign in again, then reopens. With several workspaces it only does that once every one is signed out: until then the one Slack let go says `✗ signed out · run loafer login` in its header, gets a red `✗` on the rail, and the flash says so wherever you are, while the rest carry on
 
 **Typing.** `drew is typing…` (or `drew and sam are typing…`, then `several people are typing…`) sits in dim italics on the row above the composer for 5 s after the last `user_typing`, for the open conversation only. Typing in threads isn't shown. One tick is armed while someone is typing, none when nobody is.
 
 **Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
 
-It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
+It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person (after the workspace's name, `Crumb & Co · #dev`, when there's more than one), the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
 
 **While it's closed.** `loafer notifyd install` writes a LaunchAgent (`~/Library/LaunchAgents/com.github.0xdeafcafe.loafer.notifyd.plist`) and loads it; again, it reloads or restarts it, so a new build takes over. `uninstall` unloads and removes it. `status` says whether launchd has it, and who has the websocket: notifyd, the TUI (notifyd parked), or nobody. notifyd holds the default workspace's websocket with the same rules and the same 3 s bursts, shown through `osascript` only, since it has no terminal. Nothing is ever in front of you, so focus doesn't count. Opening loafer takes the websocket over (notifyd parks it first) and closing it hands it back. Signed out, notifyd says `loafer was signed out; run loafer` once and waits for loafer to have been opened and closed before trying again. Clicking a notification does nothing yet. Its log is `~/Library/Logs/loafer/notifyd.jsonl`.
 

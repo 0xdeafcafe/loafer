@@ -21,7 +21,7 @@ func (m *Model) View() tea.View {
 		began, last := time.Now(), m.gate.Last()
 		m.frame.Reset()
 		m.frame.Grow(len(last) + len(last)/8) // one allocation, not a dozen doublings
-		canvas.Emit(&m.frame, m.render())
+		canvas.Emit(&m.frame, m.railed(m.render()))
 		drawn = true
 		obs.Frame(time.Since(began))
 		return m.frame.String()
@@ -70,6 +70,9 @@ func (m *Model) render() []canvas.Row {
 			out = m.overlayAttach(out)
 		}
 		out = m.overlayBlocks(v, out)
+		if m.acts.menu.on {
+			out = m.overlayMenu(v, out)
+		}
 	})
 	return out
 }
@@ -93,13 +96,13 @@ func (m *Model) header(v store.View) []canvas.Row {
 	case "offline":
 		state = canvas.T("◌ offline ", m.pal.SideYellow)
 	case "signed out":
-		state = canvas.T("✗ signed out · loafer login ", ink.Text.Fg(m.pal.Red.FG))
+		state = canvas.T("✗ signed out · run loafer login ", ink.Text.Fg(m.pal.Red.FG))
 	}
 	row1 = rightAlign(row1, canvas.Row{state}, m.w, ink.Text)
 
 	row2 := m.tabRow(v)
 	rule := canvas.Row{canvas.T(strings.Repeat("─", m.w), m.pal.Main.Faint)}
-	return []canvas.Row{row1, row2, rule}
+	return append(m.washed(v.Team(), row1, row2), rule)
 }
 
 // rightAlign puts right at the end of left in w cells, cutting left if
@@ -424,7 +427,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"b N", "browse, new dm"}, {"z m s x", "fold mute move leave"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {".", "actions"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":
