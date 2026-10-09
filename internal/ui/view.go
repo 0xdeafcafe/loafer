@@ -70,6 +70,9 @@ func (m *Model) render() []canvas.Row {
 		if m.mg.pk.kind != pickNone {
 			out = m.overlayPick(v, out)
 		}
+		if m.att.ask.on {
+			out = m.overlayAttach(out)
+		}
 	})
 	return out
 }
@@ -340,6 +343,9 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 	if m.editing != "" {
 		top = label("editing your message", "enter saves · esc cancels", "╭", "╮")
 	}
+	if l, r := m.attachNote(); l != "" {
+		top = label(l, r, "╭", "╮")
+	}
 	bottom := label("", "", "╰", "╯")
 	if m.th.in && m.editing == "" {
 		top, bottom = label("reply in thread", m.also(v, c), "╭", "╮"), label("ctrl+b also send to channel", "", "╰", "╯")
@@ -364,7 +370,7 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 		lines = lines[:1] // the placeholder never wraps
 	}
 	lines = inView(lines, most, field.Bg(ink.Text.FG).Fg(field.BG))
-	out := []canvas.Row{top}
+	out := append([]canvas.Row{top}, m.attachBox(edge, field, inner)...)
 	for i, l := range lines {
 		lead := "  "
 		if i == 0 {
@@ -424,13 +430,13 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"b N", "browse, new dm"}, {"z m s x", "fold mute move leave"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":
 		pairs = [][2]string{{"enter", "save"}, {"shift+enter", "new line"}, {"esc", "cancel"}}
 	default:
-		pairs = [][2]string{{"enter", "send"}, {"↑", "edit last"}, {"alt+↑↓", "channels"}, {"alt+shift+↑↓", "unread"}, {"esc", "messages"}}
+		pairs = [][2]string{{"enter", "send"}, {"ctrl+o", "attach"}, {"↑", "edit last"}, {"alt+↑↓", "channels"}, {"alt+shift+↑↓", "unread"}, {"esc", "messages"}}
 	}
 	needs := 0
 	for _, it := range m.side {
