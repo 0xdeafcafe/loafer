@@ -93,3 +93,49 @@ func TestPictureBurst(t *testing.T) {
 	t.Logf("%d landings heard in %s, %d frames (p50 %s, p99 %s, max %s), UI busy %s, %d KB raw",
 		landings, time.Since(began).Round(time.Millisecond), len(f), ms(pct(f, 50)), ms(pct(f, 99)), ms(f[len(f)-1]), ms(busy), raw>>10)
 }
+
+// TestColdSteps boots the big workspace from nothing, pictures on, and
+// lists the slowest messages the UI goroutine handled, Update and the
+// frame after it together.
+func TestColdSteps(t *testing.T) {
+	if testing.Short() {
+		t.Skip("boots the big workspace")
+	}
+	srv := slacktest.NewBig()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(func() { cancel(); srv.Close() })
+	r := newRig(t, ctx, srv, store.New())
+	bigPics(t, r)
+	type step struct {
+		what string
+		took time.Duration
+	}
+	var steps []step
+	timed := func(msg tea.Msg) {
+		began := time.Now()
+		r.step(msg)
+		steps = append(steps, step{fmt.Sprintf("%T", msg), time.Since(began)})
+	}
+	began := time.Now()
+	r.run(r.m.Init())
+	for r.m.live != "live" || r.m.open == "" {
+		timed(<-r.msgs)
+	}
+	r.run(r.m.visit(slacktest.Big))
+	for quiet := time.After(time.Second); ; {
+		select {
+		case msg := <-r.msgs:
+			timed(msg)
+			quiet = time.After(300 * time.Millisecond)
+			continue
+		case <-quiet:
+		}
+		break
+	}
+	var busy time.Duration
+	for _, s := range steps {
+		busy += s.took
+	}
+	slices.SortFunc(steps, func(a, b step) int { return int(b.took - a.took) })
+	t.Logf("%d steps in %s, UI busy %s; slowest %v", len(steps), time.Since(began).Round(time.Millisecond), ms(busy), steps[:min(8, len(steps))])
+}
