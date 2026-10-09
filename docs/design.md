@@ -119,7 +119,7 @@ The pane starts and shows an agent session through rush. loafer ships one rush p
 - **Sessions** via `sessions.start` / `subscribe` / `send`: the Claude pane starts a session with the prompt and shows it in loafer; it also appears in rush's list.
 
 Constraints from rush's plugin sandbox, and how we live with them:
-- No Keychain, env wiped: `loafer plugin install` writes a scoped token file into the plugin's `${DATA}` folder (0600).
+- No Keychain, env wiped: rush runs `security` for the plugin, as an approved `exec`, to read loafer's own item ([rush-plugin.md](rush-plugin.md)).
 - Network only through rush's HTTPS CONNECT proxy, exact hosts: `<team>.slack.com:443`, `edgeapi.slack.com:443`. The plugin uses HTTP only (no websocket), honouring `HTTPS_PROXY`.
 - Binary in the plugin folder is covered by approval, so every rebuild needs `rush plugin approve loafer`; `loafer plugin install` copies the binary and runs check + approve.
 - Session limits: 4 live, 30 starts an hour, cwd inside the declared workspace (a `~/.loafer/claude` scratch dir).

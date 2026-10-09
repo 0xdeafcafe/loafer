@@ -67,9 +67,13 @@ func Save(c Creds) error {
 	return os.WriteFile(indexPath(), b, 0o600)
 }
 
+// Secret reads a Keychain item. The rush plugin, whose sandbox can't run
+// security(1), has rush run it instead.
+var Secret = keychain.Read
+
 // Load reads a workspace's creds from the Keychain.
 func Load(teamID string) (Creds, error) {
-	b, err := keychain.Read(service, teamID)
+	b, err := Secret(service, teamID)
 	if err != nil {
 		return Creds{}, err
 	}

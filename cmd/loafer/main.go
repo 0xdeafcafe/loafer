@@ -27,7 +27,7 @@ func main() {
 	pprofAddr := flag.String("pprof", "", "serve net/http/pprof on this address, e.g. localhost:6061")
 	demoMode := flag.Bool("demo", false, "open a made-up workspace, with no sign-in, to try loafer")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  report    zip logs and the latest profile for a bug report\n  version   print the version\n\nflags:\n")
+		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  report    zip logs and the latest profile for a bug report\n  draft     put stdin in a running loafer's composer (the rush plugin's)\n  version   print the version\n\nflags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -64,6 +64,8 @@ func main() {
 		stop()
 		exitIf(err)
 		return
+	case "draft":
+		os.Exit(draft(flag.Args()[1:]))
 	case "report":
 		name := fmt.Sprintf("loafer-report-%s.zip", time.Now().Format("2006-01-02T15-04-05"))
 		f, err := os.Create(name)
@@ -131,7 +133,10 @@ func open(creds slack.Creds) (bool, error) {
 	saved := make(chan struct{})
 	go func() { st.WriteBehind(ctx, path); close(saved) }()
 	m := ui.New(ctx, st, slack.New(creds))
-	_, err := tea.NewProgram(m).Run()
+	p := tea.NewProgram(m)
+	stopDrafts := listenDrafts(creds.TeamID, p.Send)
+	_, err := p.Run()
+	stopDrafts()
 	cancel()
 	<-saved
 	return err == nil && m.SignedOut(), err
