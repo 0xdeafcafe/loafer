@@ -280,6 +280,10 @@ func inline(s string) []Span {
 		case c == ':':
 			if end := strings.IndexByte(s[i+1:], ':'); end > 0 && emojiName(s[i+1:i+1+end]) {
 				flush()
+				// :+1::skin-tone-3: is one emoji.
+				if tone, ok := strings.CutPrefix(s[i+end+2:], ":skin-tone-"); ok && len(tone) > 1 && tone[0] >= '2' && tone[0] <= '6' && tone[1] == ':' {
+					end += len(":skin-tone-N:")
+				}
 				out = append(out, Span{Kind: Emoji, Mark: mark, Text: s[i+1 : i+1+end]})
 				i += end + 2
 				continue

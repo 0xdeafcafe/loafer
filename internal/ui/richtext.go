@@ -95,7 +95,7 @@ func styled(p *Palette, v store.View, spans []mrkdwn.Span, base canvas.Style) ca
 		case mrkdwn.Group, mrkdwn.Special:
 			st = p.Yellow
 		case mrkdwn.Emoji:
-			if _, ok := emojiTable[s.Text]; !ok {
+			if _, std := emojiText(s.Text); !std {
 				st = p.Main.Dim
 			}
 		}

@@ -34,6 +34,7 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **notifications** while it's open, by slack's own rules (dms, mentions, your keywords, your threads; not what's muted, snoozed or in front of you), and a line when someone's typing.
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
 - **live**: messages, edits, deletes, reactions and read state arrive over the same websocket the desktop app uses, and it catches up on what it missed when it drops.
+- **emoji**: `:shortcodes:` are drawn as emoji, `r` on a message reacts (and un-reacts) through a picker, and `:sm` in the box completes to `:smile:`.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 
 on the way, in this order: threads, block kit buttons and modals, images, dms, activity, later, search, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -146,42 +147,22 @@ func clock(t, now time.Time) string {
 	return strings.ToLower(t.Format("2 Jan 15:04"))
 }
 
-// emoji is a shortcode as a character, when it's one of the common ones;
-// else ":name:" and a zero style, so the caller dims it.
-// ponytail: a short table, until the full Unicode shortcode list (and
-// custom emoji as images) lands with the Block Kit step.
-func emoji(name string) (string, canvas.Style) {
-	if e, ok := emojiTable[name]; ok {
-		return e, canvas.Style{}.With(canvas.Bold)
-	}
-	return ":" + name + ":", canvas.Style{}
-}
-
-var emojiTable = map[string]string{
-	"+1": "👍", "thumbsup": "👍", "-1": "👎", "eyes": "👀", "tada": "🎉", "pray": "🙏", "fire": "🔥",
-	"white_check_mark": "✅", "heavy_check_mark": "✔️", "x": "❌", "warning": "⚠️", "rotating_light": "🚨",
-	"rocket": "🚀", "heart": "❤️", "joy": "😂", "smile": "😄", "slightly_smiling_face": "🙂",
-	"stuck_out_tongue_winking_eye": "😜", "thinking_face": "🤔", "100": "💯", "wave": "👋", "ok_hand": "👌",
-	"raised_hands": "🙌", "clap": "👏", "sweat_smile": "😅", "point_up": "☝️", "speech_balloon": "💬",
-	"bangbang": "‼️", "sob": "😭", "zap": "⚡", "bug": "🐛", "memo": "📝", "link": "🔗", "lock": "🔒",
-}
-
 func reactionRow(p *Palette, v store.View, rs []slack.Reaction) canvas.Row {
 	var r canvas.Row
 	for i, x := range rs {
 		if i > 0 {
 			r = append(r, canvas.T(" ", p.Main.Text))
 		}
-		e, _ := emoji(x.Name)
-		mine := false
-		for _, u := range x.Users {
-			mine = mine || u == v.Self()
+		e, std := emojiText(x.Name)
+		chip, count := p.Chip, p.Chip.Fg(p.Main.Dim.FG)
+		if slices.Contains(x.Users, v.Self()) {
+			chip, count = p.Ask, p.Ask.Fg(p.Orange.FG).With(canvas.Bold) // yours stand out
 		}
-		count := p.Chip.Fg(p.Main.Dim.FG)
-		if mine {
-			count = p.Chip.Fg(p.Orange.FG).With(canvas.Bold)
+		glyph := chip
+		if !std {
+			glyph = chip.Fg(p.Main.Dim.FG)
 		}
-		r = append(r, canvas.T(" "+e+" ", p.Chip), canvas.T(strconv.Itoa(x.Count)+" ", count))
+		r = append(r, canvas.T(" "+e+" ", glyph), canvas.T(strconv.Itoa(x.Count)+" ", count))
 	}
 	return r
 }

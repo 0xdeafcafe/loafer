@@ -54,6 +54,7 @@ type Model struct {
 	fetching  bool     // older messages are on their way
 	back, fwd []string // conversations visited, for alt+← and alt+→
 	bar       jumper   // ctrl+k
+	emo       emojiUI  // the reaction picker and :sm popup
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -282,6 +283,10 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.say("✗ couldn't send: "+msg.err.Error(), true)
 		}
 		return m, m.markRead()
+	case reactedMsg:
+		if msg.err != nil {
+			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
+		}
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
@@ -334,6 +339,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.bar.on && s != "ctrl+c" && s != "f12" {
 		return m.jumpKey(k)
+	}
+	if m.emo.pick.on && s != "ctrl+c" && s != "f12" {
+		return m.reactKey(k)
 	}
 	if m.focus == onCompose && m.pop.on && m.popKey(s) {
 		return nil
@@ -464,12 +472,17 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.toNew()
 	case "@":
 		return m.toMention()
-	case "e", "c", "l", "o", "d", "delete":
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		return m.reactNth(int(s[0] - '0'))
+	case "r", "e", "c", "l", "o", "d", "delete":
 		msg, ok := m.selected()
 		if !ok {
 			return m.say("pick a message first (↑)", false)
 		}
 		switch s {
+		case "r":
+			m.reactPicker(msg)
+			return nil
 		case "e":
 			return m.edit(msg)
 		case "d", "delete":

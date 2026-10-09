@@ -229,6 +229,12 @@ Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/ric
 - `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
 - `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
 
+## Reactions and emoji (loafer's assumptions)
+
+`reactions.add` and `reactions.remove` take `channel`, `timestamp` and `name`, as the public API does; the registry above lists both but no call site was recovered. Errors loafer treats as "already how you wanted it": `already_reacted` and `no_reaction`. Names are iamcal/emoji-data's `short_name` (`+1`, not its alias `thumbsup`), with skin tones as `name::skin-tone-2` to `6`; loafer files a reaction under that canonical name so Slack's `reaction_added` event lands on the same chip. Two-tone names (`handshake::skin-tone-2-3`) are UNCERTAIN and not drawn as characters.
+
+UNCERTAIN, not used yet: the web client seems to rank its picker by a `emoji_use` entry in `users.prefs` (a JSON map of name to count, by memory), which would give "frequently used" across runs. Loafer keeps this session's reactions instead.
+
 ## Not recovered / suggested next step
 
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,
