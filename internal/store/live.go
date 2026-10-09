@@ -209,6 +209,10 @@ func (s *Store) Apply(ev slack.Event) {
 		if jsonx.Unmarshal(ev.Raw, &e) == nil && e.User.ID != "" {
 			s.ApplyPeople([]slack.User{e.User})
 		}
+
+	case "activity", "activity_views_updated", "activity_clear_all_completed",
+		"saved_added", "saved_updated", "saved_deleted", "saved_clear", "saved_due":
+		s.applyTabs(ev)
 	}
 }
 
@@ -249,6 +253,9 @@ func (s *Store) Add(conv string, m slack.Message) {
 		}
 		if m.TS > c.Latest {
 			c.Latest = m.TS
+		}
+		if c.Kind == IM || c.Kind == MPIM {
+			s.tabs.sawDM(conv, m)
 		}
 		if m.User != s.self && m.TS > c.LastRead {
 			c.Unread = true

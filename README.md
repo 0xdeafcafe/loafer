@@ -34,13 +34,21 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **keys for everything**: `ctrl+k` jumps anywhere, `ctrl+n` goes to whatever needs you, `alt+←` goes back, and there's a cursor over the messages for editing, binning, copying and opening links. the full list is in [docs/ui.md](docs/ui.md#keys).
 - **notifications** while it's open, by slack's own rules (dms, mentions, your keywords, your threads; not what's muted, snoozed or in front of you), and a line when someone's typing.
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
+- **dms, activity and later** are tabs along the top (`alt+1` to `alt+5`): your dms newest first with the latest line of each, mentions, replies and reactions to you, and what you saved, overdue in red. `enter` takes you to the message.
 - **live**: messages, edits, deletes, reactions and read state arrive over the same websocket the desktop app uses, and it catches up on what it missed when it drops.
 - **emoji**: `:shortcodes:` are drawn as emoji, `r` on a message reacts (and un-reacts) through a picker, and `:sm` in the box completes to `:smile:`.
 - **search**: `ctrl+f` searches messages with slack's own modifiers (`in:#dev from:@drew is:thread`), the matched words lit, and `enter` goes to the message, fetching what's around it if it's old.
+<<<<<<< HEAD
 - **threads**: `t` on a message opens its thread beside the conversation (in its place when the terminal's narrow), with its own box, `ctrl+b` to send to the channel too, and replies arriving live.
 - **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
 
 on the way, in this order: block kit buttons and modals, images, dms, activity, later, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
+=======
+- **pictures**: in kitty and ghostty, avatars and images are drawn as pictures, fetched once and kept small on disk. elsewhere it's initials and a `▣ name` line, as before.
+- **mentions**: type `@` or `#` and a list of people or channels opens above the box. the box shows `@Alex`, slack is sent `<@U123>`, and editing a message turns them back.
+
+on the way, in this order: threads, block kit buttons and modals, and notifications while it's closed. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
+>>>>>>> master
 
 ## when it goes wrong
 

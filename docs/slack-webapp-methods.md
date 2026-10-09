@@ -80,6 +80,15 @@ with `{name,emoji,sort,density}`.
 Unread counts: `client.counts` returns `activity_v2` and the boot payload has `activity_inbox_badge_counts:{total_unread_count,activity_v2}`.
 RTM: `activity`, `activity_clear_all_completed`, `activity_views_updated`.
 
+What loafer sends and reads, all UNVERIFIED until a DevTools capture (`internal/slack/tabs.go`):
+- `activity.feed` with `limit=30`, `mode=chrono_reads_and_unreads`, `types` comma-joined (FormData joins an array that way).
+- Inside `item`: `message{ts,channel,thread_ts,author_user_id,user,text}`, `reaction{user,name}`, and for bundles
+  `bundle_info.payload.thread_entry{channel_id,thread_ts,latest_ts}` or `.payload.message`. When there's no text, the message is fetched
+  with `conversations.history` (`oldest=latest=ts`, `inclusive`) or `conversations.replies`.
+- `activity.markRead` with `key, feed_ts, type, channel_id, message_ts`; errors are only logged.
+- `activity_v2` in `client.counts`: read as a number, or an object's `unread_count`/`total_unread_count`/`badge_count`/`count`.
+- The RTM events' bodies aren't read: any of them fetches the feed again, once it's been opened.
+
 ## 3. Threads view
 
 FOUND methods: `subscriptions.thread.getView`, `.mark`, `.get`, `.add`, `.remove`, `.clearAll`, `.getTimestamps`.
@@ -112,6 +121,13 @@ Filters (list/bulk): `saved`, `todo`, `completed`, `archived`(inferred), `todo_o
 List call: `fetchAndSyncSavedList({filter, laterTodos:true, replaceFilter})`; limit/cursor keys NOT FOUND (max page likely 30).
 RTM: `saved_added` (`e.saved`, `e.client_id`), `saved_updated`, `saved_deleted`, `saved_clear`, `saved_due`.
 Counts: `client.counts` response has a `saved` object.
+
+What loafer sends and reads, all UNVERIFIED until a DevTools capture (`internal/slack/tabs.go`):
+- `saved.list` with `filter=saved`, `limit=50`, one page; the list is read from `saved_items`, else `items`. Anything archived, completed or
+  not `in_progress` is dropped. A `message` in an item is used if it's there; else the message is fetched (a saved reply isn't found that way).
+- Done: `saved.update` with `item_type, item_id, ts, mark=completed` (`completed` guessed as the pair of `uncompleted`).
+- Remove: `saved.delete` with `item_type, item_id, ts` (FOUND, above).
+- The `saved_*` RTM events' bodies aren't read: any of them fetches the list again, once it's been opened.
 
 ## 5. Drafts
 
@@ -248,6 +264,13 @@ Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/ric
 `reactions.add` and `reactions.remove` take `channel`, `timestamp` and `name`, as the public API does; the registry above lists both but no call site was recovered. Errors loafer treats as "already how you wanted it": `already_reacted` and `no_reaction`. Names are iamcal/emoji-data's `short_name` (`+1`, not its alias `thumbsup`), with skin tones as `name::skin-tone-2` to `6`; loafer files a reaction under that canonical name so Slack's `reaction_added` event lands on the same chip. Two-tone names (`handshake::skin-tone-2-3`) are UNCERTAIN and not drawn as characters.
 
 UNCERTAIN, not used yet: the web client seems to rank its picker by a `emoji_use` entry in `users.prefs` (a JSON map of name to count, by memory), which would give "frequently used" across runs. Loafer keeps this session's reactions instead.
+
+## Pictures (UNCERTAIN, not tried against a live workspace)
+
+`internal/images` fetches with `slack.Client.Fetch`, a plain GET.
+- Private files (`files[].url_private`, `thumb_360`/`thumb_480`/`thumb_720` on `files.slack.com`) get the session's `d` cookie and nothing else, as a browser tab sends it. Whether the cookie alone is enough, or `files.slack.com` also wants `Authorization: Bearer xoxc-…` as it does for app tokens, is unchecked. If it 302s to a login page, the decode fails and the file shows as its line, as with graphics off.
+- Avatars (`users.list` `profile.image_72`, a bot's `bot_profile.icons.image_72`) are on `avatars.slack-edge.com` or `secure.gravatar.com` and get no credentials. The cookie only ever goes over https to `slack.com` and its subdomains, and Go's client drops it on a redirect elsewhere.
+- Image files are sized from `original_w`/`original_h`; image blocks from `image_width`/`image_height`, which are undocumented. Without them a picture takes no room until it lands.
 
 ## Not recovered / suggested next step
 

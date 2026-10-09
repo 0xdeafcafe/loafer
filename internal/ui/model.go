@@ -59,6 +59,7 @@ type Model struct {
 	emo       emojiUI  // the reaction picker and :sm popup
 	find      finder   // ctrl+f
 	th        threadPane
+	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -115,7 +116,7 @@ type (
 )
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot())
+	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot(), m.startPics())
 }
 
 func (m *Model) waitStore() tea.Cmd {
@@ -242,6 +243,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			slog.Warn("stall", "what", fmt.Sprintf("%T", msg), "ms", d.Milliseconds())
 		}
 	}()
+	if cmd, ok := m.onPics(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -256,7 +260,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
-		cmd := m.waitStore()
+		cmd := tea.Batch(m.waitStore(), m.fetchTabs())
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
 		}
@@ -289,6 +293,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.conv == m.open {
 			return m, m.markRead()
 		}
+	case tabMsg:
+		return m, m.tabDone(msg)
 	case sentMsg:
 		if msg.err != nil {
 			return m, m.say("✗ couldn't send: "+msg.err.Error(), true)
@@ -418,9 +424,17 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.goBack()
 	case "alt+right":
 		return m.goForward()
+	case "alt+1", "alt+2", "alt+3", "alt+4", "alt+5":
+		return m.setTab(tabID(s[4] - '1'))
+	}
+	if m.tabs.on == tabClaude {
+		return nil // ponytail: the Claude pane's keys go here
 	}
 	switch m.focus {
 	case onSide:
+		if m.tabs.on != tabHome {
+			return m.tabKey(s)
+		}
 		return m.sideKey(s)
 	case onMsgs:
 		return m.msgsKey(s)

@@ -50,8 +50,7 @@ func (m *Model) render() []canvas.Row {
 		}
 		out = append(out, m.header(v)...)
 		bodyH := m.h - headerH - 1
-		sw := min(34, max(24, m.w/4))
-		side := m.sidebar(v, sw, bodyH)
+		sw, side := m.left(v, bodyH)
 		div := make([]canvas.Row, bodyH)
 		for i := range div {
 			div[i] = canvas.Row{canvas.T("│", m.pal.Main.Faint)}
@@ -102,14 +101,7 @@ func (m *Model) header(v store.View) []canvas.Row {
 	}
 	row1 = rightAlign(row1, canvas.Row{state}, m.w, ink.Text)
 
-	tab := func(name string, on bool) canvas.Seg {
-		if on {
-			return canvas.T(" "+name+" ", ink.Sel.With(canvas.Bold))
-		}
-		return canvas.T(" "+name+" ", ink.Dim)
-	}
-	row2 := canvas.Row{canvas.T(" ", ink.Text), tab("Home", true), tab("DMs", false), tab("Activity", false), tab("Later", false), tab("Claude", false)}
-	row2 = canvas.Fit(row2, m.w, ink.Text)
+	row2 := m.tabRow(v)
 	rule := canvas.Row{canvas.T(strings.Repeat("─", m.w), m.pal.Main.Faint)}
 	return []canvas.Row{row1, row2, rule}
 }
@@ -244,6 +236,9 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 
 func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	ink := m.pal.Main
+	if m.tabs.on == tabClaude {
+		return m.claude(w, h)
+	}
 	c := v.Conv(m.open)
 	if c == nil {
 		rows := make([]canvas.Row, h)
@@ -410,6 +405,8 @@ func (m *Model) hints(v store.View) canvas.Row {
 	switch {
 	case m.focus >= onThread:
 		pairs = m.threadHints()
+	case m.tabs.on != tabHome && (m.focus == onSide || m.tabs.on == tabClaude):
+		pairs = m.tabHints()
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":

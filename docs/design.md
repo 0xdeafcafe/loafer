@@ -39,7 +39,7 @@ internal/store        the in-memory model + disk cache; the only owner of Slack 
 internal/mrkdwn       mrkdwn and rich_text blocks -> styled spans
 internal/blockkit     blocks/attachments/modals -> rows with hit targets
 internal/ui           bubbletea model, screens, keys, command bar
-internal/img          avatars and images: fetch, decode, cache (uses termimg)
+internal/images       avatars and images: fetch, decode, cache (uses termimg)
 internal/obs          event log, trace, metrics, pprof, report bundle
 internal/rushlink     optional rush integration (AI features); off unless rush is found
 github.com/0xdeafcafe/photon  shared with rush: canvas, cellw, frame, fuzzy, hl, jsonx, keychain, rows, termimg, theme, uithread

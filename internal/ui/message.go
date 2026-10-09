@@ -88,9 +88,16 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 	pad := canvas.T(strings.Repeat(" ", gutter), ink.Text)
 
 	name, app := author(v, m)
+	chin := canvas.T("  ", canvas.Style{}.Bg(tint(m.User+m.BotID+m.Username))) // the initials' second row
 	if header {
 		av := canvas.Style{}.Bg(tint(m.User + m.BotID + m.Username)).Fg(rgb(240, 236, 228)).With(canvas.Bold)
-		head := canvas.Row{canvas.T(initials(name), av), canvas.T(" ", ink.Text), canvas.T(name, ink.Bright.With(canvas.Bold))}
+		f, pic := face(v, m)
+		if !pic {
+			f = canvas.T(initials(name), av)
+		} else {
+			chin = canvas.T("  ", ink.Text)
+		}
+		head := canvas.Row{f, canvas.T(" ", ink.Text), canvas.T(name, ink.Bright.With(canvas.Bold))}
 		if app {
 			head = append(head, canvas.T("  ", ink.Text), canvas.T("app", ink.Dim))
 		}
@@ -123,15 +130,13 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 		lead := pad
 		if header && i == 0 {
 			// The avatar's second row sits beside the first line.
-			av := canvas.Style{}.Bg(tint(m.User + m.BotID + m.Username))
-			lead = canvas.T("  ", av)
-			rows = append(rows, append(canvas.Row{lead, canvas.T(" ", ink.Text)}, r...))
+			rows = append(rows, append(canvas.Row{chin, canvas.T(" ", ink.Text)}, r...))
 			continue
 		}
 		rows = append(rows, append(canvas.Row{lead}, r...))
 	}
 	if header && len(body) == 0 {
-		rows = append(rows, canvas.Row{canvas.T("  ", canvas.Style{}.Bg(tint(m.User+m.BotID+m.Username)))})
+		rows = append(rows, canvas.Row{chin})
 	}
 	return rows
 }

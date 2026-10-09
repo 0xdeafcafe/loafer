@@ -7,10 +7,10 @@ Slack's layout and features, drawn in rush's visual language. If a Slack element
 1. **One ground, four greys, one accent.** rush's palette and theme mapping as is (`theme.Ground`, `Ink/Surface/Accent`, colour-blind mode). Text 226,221,211; sub 168,162,152; dim 122,117,108; faint 72,68,63. Accent is rush's terracotta 217,119,87.
 2. **Colour is state, never decoration.**
    - orange: focus, you, selection rail, matched characters
-   - yellow: needs you, meaning mentions, @you, overdue
+   - yellow: needs you, meaning mentions, @you, due today
    - blue: links, #channels and @others
    - green: ok, primary buttons, "recovered"
-   - red: failure, danger buttons, delete
+   - red: failure, danger buttons, delete, overdue
    - lavender: drafts and scheduled
    - Slack's attachment colours are an exception: they're content, drawn as a narrow `▌` bar mapped through `theme.Accent` so they stay readable on any ground.
 2a. **Workspace colour.** The workspace's sidebar theme colour (aubergine for LangWatch) is the ground of the header, the tab row and the sidebar pane; the message, thread and overlay panes keep rush's ground. The header also gets rush's static gradient wash toward the right, ramping into the same colour. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
@@ -143,10 +143,10 @@ Notes:
   - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. Collapsed sections with unreads show a count; quiet collapsed sections fold into one `▸ Social · Product · 3 more` line.
   - Rows: unread names are bright and bold, read ones plain sub, muted ones faint. On the right, the unread count is dim, and mentions are `@2` in yellow bold.
   - `↓ 4 more unread` and `↑ …` at the edges are Slack's "More unread messages" pills, drawn as rush's `↓ N more` chip.
-- **Avatars**: 2×2 cells beside the name and first line. They're kitty images, or initials on a chip tinted from the user's id.
+- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line.
 - **Pane header**: rush's chrome-filled block. It shows the channel, its topic dim, members `⊙ 4`, saved `◆`, and search `⌕`. One tab row, with the active tab underlined in orange.
 - **Messages**:
-  - **Header.** A 2×2-cell avatar (kitty image, or initials on a tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
+  - **Header.** An avatar (a 2×1 kitty picture, or initials on a 2×2 tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
   - **Day dividers** are a dim label centred on nothing, Slack's pill without the pill. The current day sticks to the top as a chrome chip.
   - **The "new" line** is a full-width orange rule with `new` at the right.
   - **Attachments and blocks** sit behind a `▌` in their colour. Fields lay out in two columns when there's room. The footer is dim with ` · `. Long bodies fold at 8 rows to `⋯ show more`, in blue.
@@ -213,7 +213,7 @@ Rendering:
 - **Selects and overflow menus** are a chip with `▾` that opens rush's picker sheet.
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
-- **Images** use kitty placeholders up to 12 rows tall, or `▣ name 1200×800` when graphics are off.
+- **Images** (image blocks, attachments' images, image files) are kitty placeholders up to 8 rows tall, with their `▣ name 1200×800` line (or the file's line) under them as a caption; with graphics off it's just that line. One on its way holds the rows it'll take when its size is known, so nothing jumps when it lands. A context block's images are a picture a row high beside its text. Behind an overlay, pictures go blank.
 - **Headers** are bold and bright, with a blank row above unless they come first. **Sections** are their text, then their fields, two columns when each gets 20 cells, then the accessory as its chip.
 - A message with blocks shows the blocks and not its text, as Slack does: the text is the notification's fallback. If none of its blocks can be drawn, the text shows instead. One that can't (an `input`, a `table`) is a faint `unsupported block (input)`.
 - **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.
@@ -300,6 +300,8 @@ The menu is anchored at the selected message, on the right. Its keys also work w
 
 DM rows use rush's two-row agent layout: name, then a `╰` summary line in dim. The time is right-aligned and short: today shows the clock time, then `monday`, then `23 sep`. Unread rows are bright and bold.
 
+The list goes where the sidebar is, newest first, and `enter` opens the DM beside it with you in the composer. The 25 newest have their latest message fetched the first time the tab opens; the rest get one when something arrives. Not yet: unread only, and new.
+
 ## Activity
 
 ```
@@ -319,7 +321,9 @@ DM rows use rush's two-row agent layout: name, then a `╰` summary line in dim.
 - The type glyph comes first, then the name.
 - The channel is a dim `# dev` with no chip fill, since chips are reserved for things you can press.
 - After that comes the text, with mentions coloured, and the time.
-- Rows are grouped by day under section rules. The right pane is the item in context.
+- Rows are grouped by day under section rules. Unread ones are bold, and the tab's badge counts them.
+- `enter` marks it read and opens its conversation beside the list with the cursor on the message (a reply's thread parent, until threads come).
+- Not yet: the dms, mentions and threads filters, and unread only.
 
 ## Threads
 
@@ -354,7 +358,7 @@ The composer collapses to a single row until it's focused. Forwarded messages an
     ╰ Can you send me a copy of your current 30% ruling beschikking…
 ```
 
-Due times are dim, `due today` is yellow, and `overdue` is yellow and bold. `d` marks an item done, `a` archives it, and `r` sets a reminder.
+Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter` goes to the message, `d` marks it done and `x` takes it off the list. Not yet: the archived and completed lists, archiving and reminders.
 
 ## ctrl+k: jump and search
 
@@ -433,11 +437,14 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `alt+↑` `alt+↓` | the conversation above or below in the sidebar |
 | `alt+shift+↑` `alt+shift+↓` | the unread conversation above or below |
 | `alt+←` `alt+→` | back and forward through the conversations you've visited |
+| `alt+1` … `alt+5` | the tabs: Home, DMs, Activity, Later, Claude. A tab's list is fetched the first time it opens |
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
 
 **Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits.
+
+**DMs, Activity and Later lists**: `↑↓` or `j k`, `pgup pgdn`, `g G`, `enter` opens it, and in Later `d` done and `x` remove. `tab` goes to the conversation beside them, and `esc` there comes back.
 
 **Messages**: there's a cursor, and it starts on the newest message.
 
