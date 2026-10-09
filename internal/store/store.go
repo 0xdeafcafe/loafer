@@ -234,7 +234,7 @@ func (s *Store) SetWindow(conv string, newestFirst []slack.Message, more, older 
 		if older {
 			w.Msgs = append(msgs, w.Msgs...)
 		} else {
-			w.Msgs, w.Newer = msgs, false
+			w.Msgs, w.Newer, w.stale = msgs, false, false
 		}
 		w.More = more
 		s.touch(conv)
@@ -290,7 +290,7 @@ func (s *Store) Refresh(ctx context.Context, c *slack.Client, conv string) error
 		for i := len(msgs) - 1; i >= 0; i-- {
 			keep = append(keep, msgs[i])
 		}
-		w.Msgs, w.Newer = keep, false
+		w.Msgs, w.Newer, w.stale = keep, false, false
 		s.touch(conv)
 	})
 	return nil

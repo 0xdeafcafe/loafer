@@ -266,10 +266,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
-		cmd := tea.Batch(m.waitStore(), m.fetchTabs())
-		if m.open != "" && m.scroll == 0 {
-			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
-		}
+		cmd := tea.Batch(m.waitStore(), m.fetchTabs(), m.readIfWatching()) // watching it come in is reading it
 		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
 	case bootedMsg:
 		switch {
@@ -297,7 +294,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.say("couldn't open: "+msg.err.Error(), true)
 		}
 		if msg.conv == m.open {
-			return m, m.markRead()
+			return m, m.readIfWatching() // not if you've scrolled up meanwhile
 		}
 	case tabMsg:
 		return m, m.tabDone(msg)
@@ -324,7 +321,11 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case askedMsg, claudeMsg, caughtUpMsg, rushDoneMsg:
 		return m, m.claudeUpdate(msg)
 	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
-		return m, m.alert(msg)
+		cmd := m.alert(msg)
+		if _, back := msg.(tea.FocusMsg); back {
+			cmd = tea.Batch(cmd, m.readIfWatching())
+		}
+		return m, cmd
 	case Draft:
 		return m, m.takeDraft(msg)
 	case flashOffMsg:
@@ -354,11 +355,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inThread(func() { m.insert(msg.Content); m.refreshPop() })
 		}
 	case tea.MouseWheelMsg:
-		if msg.Button == tea.MouseWheelUp {
-			m.scroll += 3
-		} else {
-			m.scroll = max(0, m.scroll-3)
-		}
+		m.wheel(msg)
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
 	default:
@@ -447,6 +444,11 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.setTab(tabID(s[4] - '1'))
 	case "alt+c":
 		return m.claudeHere()
+	case "ctrl+end": // the conversation's newest, from anywhere but the thread
+		if m.focus < onThread && m.tabs.on != tabClaude {
+			cmd := m.pick(newest)
+			return tea.Batch(cmd, m.readIfWatching())
+		}
 	}
 	if m.tabs.on == tabClaude {
 		return m.claudeKey(k)
@@ -470,6 +472,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 // setFocus moves focus to f; the message cursor starts on the newest
 // message, and goes when focus leaves.
 func (m *Model) setFocus(f focus) {
+	m.uncover(f)
 	m.threadFocus(f)
 	if f == onMsgs && m.focus != onMsgs && m.sel == "" { // after an edit, stay on what was edited
 		m.pick(by(-1))

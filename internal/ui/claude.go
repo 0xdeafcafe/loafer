@@ -699,7 +699,7 @@ func (m *Model) claudeBox(w int) []canvas.Row {
 	for _, l := range splitLines(text) {
 		lines = append(lines, canvas.Wrap(l, inner)...)
 	}
-	lines = lines[max(0, len(lines)-4):] // shortcut: follows the end, not the cursor
+	lines = inView(lines, 4, field.Bg(ink.Text.FG).Fg(field.BG))
 	for i, l := range lines {
 		lead := "  "
 		if i == 0 {

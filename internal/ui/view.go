@@ -268,7 +268,7 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 		box = append(t, box...)
 	}
 	listH := max(0, h-len(head)-len(box))
-	list := m.overlayPop(m.messages(v, c, w, listH), w)
+	list := m.overlayPop(m.newerPill(v, c, m.messages(v, c, w, listH), w), w)
 	return append(append(head, list...), box...)
 }
 

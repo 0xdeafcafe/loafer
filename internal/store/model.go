@@ -56,6 +56,7 @@ type Window struct {
 	More  bool            `json:"more"`
 	Newer bool            `json:"newer,omitempty"`
 	used  uint64          // the store's clock when last viewed, for eviction
+	stale bool            // held across a gap (the socket down, or from the cache): live messages skip it till a Refresh, so none sits after a hole
 }
 
 func person(u slack.User) Person {
