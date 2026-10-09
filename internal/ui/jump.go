@@ -32,6 +32,7 @@ type jumpItem struct {
 	conv, section string
 	lit           []int // runes of the title the query matched
 	score         int
+	ws            *Model // a workspace to switch to, instead of a conversation (workspaces.go)
 }
 
 const jumpCap = 50
@@ -61,6 +62,7 @@ func (m *Model) buildJump(v store.View) {
 		add("Recent", anyConv, recent)
 		add("Unread", unreadConv, side)
 		add("Conversations", anyConv, side)
+		j.items = append(j.items, m.jumpWorkspaces("")...)
 		return
 	}
 	q := string(j.query)
@@ -84,6 +86,7 @@ func (m *Model) buildJump(v store.View) {
 		}
 		j.items = append(j.items, jumpItem{conv: id, section: "Conversations", lit: lit, score: score})
 	}
+	j.items = append(j.items, m.jumpWorkspaces(q)...)
 	slices.SortStableFunc(j.items, func(a, b jumpItem) int { return b.score - a.score })
 	j.items = j.items[:min(len(j.items), jumpCap)]
 }
@@ -129,6 +132,9 @@ func (m *Model) jumpKey(k tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		j.on = false
 		if j.at < len(j.items) {
+			if to := j.items[j.at].ws; to != nil {
+				return func() tea.Msg { return switchMsg{to} }
+			}
 			m.setFocus(onCompose)
 			return m.visit(j.items[j.at].conv)
 		}
@@ -225,6 +231,9 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 }
 
 func (m *Model) jumpRow(v store.View, it jumpItem, w int, sel bool, fill canvas.Style) canvas.Row {
+	if it.ws != nil {
+		return m.jumpWsRow(it, w, sel, fill)
+	}
 	ink := m.pal.Main
 	c := v.Conv(it.conv)
 	if c == nil {

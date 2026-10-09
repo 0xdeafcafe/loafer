@@ -20,7 +20,7 @@ func (m *Model) View() tea.View {
 		began, last := time.Now(), m.gate.Last()
 		m.frame.Reset()
 		m.frame.Grow(len(last) + len(last)/8) // one allocation, not a dozen doublings
-		canvas.Emit(&m.frame, m.render())
+		canvas.Emit(&m.frame, m.railed(m.render()))
 		drawn = true
 		obs.Frame(time.Since(began))
 		return m.frame.String()
@@ -97,13 +97,13 @@ func (m *Model) header(v store.View) []canvas.Row {
 	case "offline":
 		state = canvas.T("◌ offline ", m.pal.SideYellow)
 	case "signed out":
-		state = canvas.T("✗ signed out · loafer login ", ink.Text.Fg(m.pal.Red.FG))
+		state = canvas.T("✗ signed out · run loafer login ", ink.Text.Fg(m.pal.Red.FG))
 	}
 	row1 = rightAlign(row1, canvas.Row{state}, m.w, ink.Text)
 
 	row2 := m.tabRow(v)
 	rule := canvas.Row{canvas.T(strings.Repeat("─", m.w), m.pal.Main.Faint)}
-	return []canvas.Row{row1, row2, rule}
+	return append(m.washed(v.Team(), row1, row2), rule)
 }
 
 // rightAlign puts right at the end of left in w cells, cutting left if

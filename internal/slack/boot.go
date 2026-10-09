@@ -52,6 +52,7 @@ type Team struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
+	Colour string `json:"loafer_colour,omitempty"` // not Slack's: ThemeColour of boot's prefs, kept in the cache
 }
 
 func (c *Client) UserBoot(ctx context.Context) (UserBoot, error) {
