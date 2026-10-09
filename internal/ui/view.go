@@ -31,6 +31,7 @@ func (m *Model) View() tea.View {
 	v := tea.NewView(out)
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
+	v.ReportFocus = true // to know when the open conversation is worth a notification
 	v.WindowTitle = "loafer"
 	return v
 }
@@ -262,8 +263,11 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	head := []canvas.Row{canvas.Fit(title, w, m.pal.Panel), canvas.Fit(nil, w, ink.Text)}
 
 	box := m.composer(v, c, w, min(6, max(1, h-len(head)-3)))
+	if t := m.typingRow(v, w); t != nil {
+		box = append(t, box...)
+	}
 	listH := max(0, h-len(head)-len(box))
-	list := m.messages(v, c, w, listH)
+	list := m.overlayPop(m.messages(v, c, w, listH), w)
 	return append(append(head, list...), box...)
 }
 
@@ -337,21 +341,7 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 		}
 		text = append(text, canvas.T("a message for "+convLabel(v, c), field.Fg(ink.Faint.FG)))
 	} else {
-		before, after := string(m.input[:m.cur]), string(m.input[m.cur:])
-		text = canvas.Row{canvas.T(before, field)}
-		if m.focus == onCompose {
-			at, rest := " ", after
-			if after != "" {
-				r := []rune(after)
-				at, rest = string(r[0]), string(r[1:])
-				if at == "\n" {
-					at, rest = " ", "\n"+rest
-				}
-			}
-			text = append(text, canvas.T(at, field.Bg(ink.Text.FG).Fg(field.BG)), canvas.T(rest, field))
-		} else {
-			text = append(text, canvas.T(after, field))
-		}
+		text = m.inputRow(field, field.Fg(m.pal.Blue.FG), field.Bg(ink.Text.FG).Fg(field.BG), m.focus == onCompose)
 	}
 	var lines []canvas.Row
 	for _, l := range splitLines(text) {
@@ -360,9 +350,7 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 	if len(m.input) == 0 {
 		lines = lines[:1] // the placeholder never wraps
 	}
-	if len(lines) > most {
-		lines = lines[len(lines)-most:] // ponytail: follows the end, not the cursor
-	}
+	lines = inView(lines, most, field.Bg(ink.Text.FG).Fg(field.BG))
 	out := []canvas.Row{top}
 	for i, l := range lines {
 		lead := "  "

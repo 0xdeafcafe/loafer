@@ -449,6 +449,10 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
+Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
+
+**Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+
 Not yet: thread keys (`t`, `→`), reactions (`r`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
@@ -459,6 +463,12 @@ The connection state lives in header row 1:
 - `● live` in green
 - `◌ reconnecting 3s` in yellow
 - signed out, loafer closes and asks you to sign in again, then reopens
+
+**Typing.** `drew is typing…` (or `drew and sam are typing…`, then `several people are typing…`) sits in dim italics on the row above the composer for 5 s after the last `user_typing`, for the open conversation only. Typing in threads isn't shown. One tick is armed while someone is typing, none when nobody is.
+
+**Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
+
+It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
 
 ## Sizes
 

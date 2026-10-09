@@ -35,6 +35,7 @@ type Store struct {
 	link     string // the websocket: connecting, live or offline; "" before it's tried
 
 	booted atomic.Bool // a boot has got through
+	al     alertState  // notification rules and typing (alert.go)
 
 	version atomic.Uint64
 	changed chan struct{}
@@ -47,6 +48,7 @@ func New() *Store {
 		convs:   map[string]*Conv{},
 		emoji:   map[string]string{},
 		windows: map[string]*Window{},
+		al:      newAlertState(),
 		changed: make(chan struct{}, 1),
 		dirty:   make(chan struct{}, 1),
 	}
@@ -82,6 +84,7 @@ func (s *Store) ApplyBoot(b slack.UserBoot) {
 		s.self, s.team = b.Self.ID, b.Team
 		p := person(b.Self)
 		s.people[p.ID] = &p
+		s.al.prefs.Load(b.Prefs, b.DND)
 		for _, list := range [][]slack.Conversation{b.Channels, b.IMs} {
 			for _, c := range list {
 				s.putConv(c)

@@ -128,6 +128,7 @@ func (s *Store) Apply(ev slack.Event) {
 			var m slack.Message
 			if jsonx.Unmarshal(ev.Raw, &m) == nil {
 				s.Add(e.Channel, m)
+				s.alert(e.Channel, m)
 			}
 		}
 
@@ -193,6 +194,9 @@ func (s *Store) Apply(ev slack.Event) {
 		if jsonx.Unmarshal(ev.Raw, &e) == nil {
 			s.update(func() { delete(s.convs, e.Channel) })
 		}
+
+	case "pref_change", "dnd_updated", "user_typing":
+		s.applyAlert(ev)
 
 	case "user_change":
 		var e struct {
