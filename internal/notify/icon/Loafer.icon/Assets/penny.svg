@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<g transform="translate(509 478) rotate(31)">
- <path fill="#36C5F0" d="M-24 -15 H-2 V-1 H-31 V-7 Q-31 -15 -24 -15 Z"/>
- <path fill="#2EB67D" d="M2 -15 H24 Q31 -15 31 -7 V-1 H2 Z"/>
- <path fill="#ECB22E" d="M2 3 H31 V9 Q31 17 24 17 H2 Z"/>
- <path fill="#E01E5A" d="M-31 3 H-2 V17 H-24 Q-31 17 -31 9 Z"/>
+<g transform="translate(573 464) rotate(31)">
+ <path fill="#36C5F0" d="M-34 -22 H15 V22 H-34 Q-44 22 -44 12 V-12 Q-44 -22 -34 -22 Z"/>
+ <path fill="#2EB67D" d="M15 -22 H34 Q44 -22 44 -12 V-7 H15 Z"/>
+ <path fill="#ECB22E" d="M15 -7 H44 V8 H15 Z"/>
+ <path fill="#E01E5A" d="M15 8 H44 V12 Q44 22 34 22 H15 Z"/>
 </g>
 </svg>
