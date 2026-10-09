@@ -2,6 +2,8 @@ package store
 
 import (
 	"encoding/json/jsontext"
+	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -148,4 +150,24 @@ func TestPreviewDropPut(t *testing.T) {
 			t.Fatal("not restored")
 		}
 	})
+}
+
+// DMs with nothing said yet tie, and must not swap places between frames.
+func TestSidebarSteady(t *testing.T) {
+	s := New()
+	var b slack.UserBoot
+	for i := range 30 {
+		b.IMs = append(b.IMs, slack.Conversation{ID: fmt.Sprintf("D%02d", i), IsIM: true, User: fmt.Sprintf("U%02d", i)})
+		b.Channels = append(b.Channels, slack.Conversation{ID: fmt.Sprintf("C%02d", i), Name: "same"})
+	}
+	s.ApplyBoot(b)
+	var first []Section
+	s.Read(func(v View) { first = v.Sidebar() })
+	for range 20 {
+		s.Read(func(v View) {
+			if got := v.Sidebar(); !reflect.DeepEqual(got, first) {
+				t.Fatalf("the sidebar moved:\n%v\n%v", first, got)
+			}
+		})
+	}
 }

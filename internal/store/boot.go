@@ -78,9 +78,29 @@ func (s *Store) Boot(ctx context.Context, c *slack.Client) error {
 	wg.Wait()
 	if len(errs) == 0 {
 		s.booted.Store(true)
+		go s.meetStrangers(ctx, c)
 	}
 	slog.Info("boot", "ms", time.Since(began).Milliseconds(), "ok", len(errs) == 0)
 	return errors.Join(errs...)
+}
+
+// meetStrangers looks up the people you have DMs with whom users.list
+// didn't list (Slack Connect, other orgs), so the sidebar has names, not
+// ids. Each lands as it comes.
+func (s *Store) meetStrangers(ctx context.Context, c *slack.Client) {
+	var who []string
+	s.Read(func(v View) {
+		for _, x := range v.s.convs {
+			if x.Kind == IM && x.User != "" && v.s.people[x.User] == nil {
+				who = append(who, x.User)
+			}
+		}
+	})
+	for _, id := range who {
+		if err := s.PersonInfo(ctx, c, id); err != nil {
+			slog.Warn("boot", "what", "users.info", "user", id, "err", err)
+		}
+	}
 }
 
 // Open fetches conv's latest page into its window, unless one's held.

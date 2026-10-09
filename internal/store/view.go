@@ -146,10 +146,15 @@ func (v View) Sidebar() []Section {
 				}
 			}
 		}
+		// ids come from a map, so ties break by id or rows swap between frames
 		if sec.Type == "channels" {
-			slices.SortFunc(ids, func(a, b string) int { return cmp.Compare(v.s.convs[a].Name, v.s.convs[b].Name) })
+			slices.SortFunc(ids, func(a, b string) int {
+				return cmp.Or(cmp.Compare(v.s.convs[a].Name, v.s.convs[b].Name), cmp.Compare(a, b))
+			})
 		} else {
-			slices.SortFunc(ids, func(a, b string) int { return cmp.Compare(v.s.convs[b].Latest, v.s.convs[a].Latest) })
+			slices.SortFunc(ids, func(a, b string) int {
+				return cmp.Or(cmp.Compare(v.s.convs[b].Latest, v.s.convs[a].Latest), cmp.Compare(a, b))
+			})
 		}
 		for _, id := range ids {
 			placed[id] = true

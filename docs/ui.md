@@ -13,11 +13,11 @@ Slack's layout and features, drawn in rush's visual language. If a Slack element
    - red: failure, danger buttons, delete, overdue
    - lavender: drafts and scheduled
    - Slack's attachment colours are an exception: they're content, drawn as a narrow `▌` bar mapped through `theme.Accent` so they stay readable on any ground.
-2a. **Workspace colour.** Slack's aubergine is the ground of the header, the tab row and the sidebar pane, whichever workspace it is; the message, thread and overlay panes keep rush's ground. The workspace's own colour is in the header's static gradient wash (rush's): plain for the first 60% of the width, then ramping in four-cell steps into it at the right edge, held back wherever the header's text would stop reading. That colour is your sidebar theme's in that workspace, if you gave it one (an uncertain pref, see slack-webapp-methods.md), else one of a few dark theme colours picked by a hash of the team id, so it's the same every time. All inks on the workspace ground go through `theme.Ground{BG: workspace}` so text keeps 4.5:1 and dim keeps 3:1. The selection fill on the sidebar is the workspace colour lifted one step (as Slack's selected row), still with the orange `▍`. Fallback when a workspace has no theme: rush's `panelBG`.
+2a. **Workspace colour.** Slack's aubergine is an accent, never a ground: the header, the tab row, the sidebar and the panes all sit on the terminal's own neutral ground (`theme.Ground`), and the aubergine, lifted to a plum (`Palette.Brand`) through `theme.Accent` so it reads on dark and light grounds alike, marks only the wordmark, the active tab and the open conversation in the sidebar. A workspace's own colour (your sidebar theme's, else one of a few dark colours picked by a hash of the team id) is its chip on the workspace rail and nowhere else.
 3. **Bold is for what wants you**: unread channel names, mention counts, author names, section titles, key names in hints. Read things are plain; muted things are faint.
 4. **No borders around content.** Hierarchy comes from greys, one-row gaps and fills. Rounded boxes only for things you type into and things floating over the screen: the composer, ctrl+k, modals and menus.
 5. **Every list row has a marker column** and the same selection: a `selBG` fill plus an orange `▍` in column 0. Hover is `hoverBG`.
-6. **Hint line grammar**: `key label · key label`. The key is bold, the label dim, and the separator a faint ` · `. At most 5 pairs, and the least important drop first when narrow.
+6. **Hint line grammar**: `key label  ·  key label`. The key is bold sub, the label dim, and the separator a faint `·` with two spaces each side. At most 5 pairs, the few that matter where you are (the `.` menu and the Keys below hold the rest), and the least important drop first when narrow.
 7. **One blank row** between groups, never two. One level of tabs per pane.
 8. **Emoji only in content** (messages, reactions, statuses, section emoji the user chose). The chrome uses rush's geometric glyphs.
 9. **Animate only real work**: `✻` spinner after a button click or while sending, at rush's slow tick. Nothing moves when idle.
@@ -40,7 +40,8 @@ Slack's layout and features, drawn in rush's visual language. If a Slack element
 | quote / forwarded message rail | `▏` | faint |
 | sending / working | `✻` (rush spinner family) | orange |
 | sent ok / failed | (nothing) / `✗ retry` | - / red |
-| new-messages line | `─── new` | orange |
+| new-messages line | `──── new ──` | orange label, rule half toward the ground |
+| day divider | `──── today ────` | sub label, faint rule |
 | prompt | `❯` | orange |
 | more | `⋯ 51 more replies` | blue |
 
@@ -92,13 +93,13 @@ A loafer, side on with the toe to the right, in Slack's four brand colours. The 
 **How it works.** The UI computes the logo state from the store's counts and the connection state, the same values the header counts are drawn from. Each look's frames are rendered once at start and cached per ground, so switching only swaps cached rows. An animation runs on its own short timer while it plays, and the timer stops when it ends.
 
 Both looks:
-- **Colours.** All pass through `theme.Accent`, so they hold their contrast on light grounds. The aubergine is lifted to a muted plum (about 653866) on dark grounds, and further on the aubergine header.
+- **Colours.** All pass through `theme.Accent`, so they hold their contrast on light grounds. The aubergine is lifted to a muted plum (about 653866) on dark grounds.
 - **Narrow terminals.** Under 100 columns the logo is dropped and only the wordmark shows.
 - **Notifier icon.** The notifier app's icon is the bands shoe, rendered as a PNG.
 
 ## Welcome
 
-The first frame normally comes from the cache. When there's none (the first run, or a workspace just signed in to with `loafer login`) there's nothing to draw yet, and a big workspace's boot takes a while, so loafer shows this instead, on the workspace's aubergine:
+The first frame normally comes from the cache. When there's none (the first run, or a workspace just signed in to with `loafer login`) there's nothing to draw yet, and a big workspace's boot takes a while, so loafer shows this instead, on the neutral ground with the wordmark in plum:
 
 ```
                                 ▄▄▄
@@ -137,66 +138,56 @@ The first frame normally comes from the cache. When there's none (the first run,
 ## Main screen (Home, channel open, thread closed)
 
 ```
-  loafer  LangWatch ▾    @ 3 mentions   12 unread   ✻ 1 agent waiting               ● live   alex
-  [Home] DMs ·2  Activity ·3  Later ·5  Claude                    ctrl+k jump · ctrl+f search
- ─────────────────────────────────────────────────────────────────────────────────────────────────
-  HOME                      │ # prod-alerts-page   someone must look now          ⊙ 4   ◆   ⌕
-  ▾ ◇ Threads             2 │ messages  files  pins
-    ✎ Drafts & sent      65 │──────────────────────────────────────────────────────────────────
-                            │                              today ▾
-  ▾ 🚨 big bong ──────────── │ ▌ What happened: 37 groups are blocked at once (page threshold
-    # opensource-alerts     │ ▌ 5+). A single hand-unblockable group no longer pages - this
-    # prod-alerts-attend    │ ▌ fires only when blocks pile up systemically…
-    # prod-alerts-digest    │ ▌ ⋯ show more
- ▍  # prod-alerts-page      │ ▌ Grafana v12.4.3 · 20:49
-    # prod-infra-reviews  1 │
-    # prod-security         │ ▌ ✓ RECOVERED · Fatal Errors
-                            │ ▌ Fatal Errors recovered
-  ▸ Team  4 ───────────────  │ ▌ Fired 18:49 → 18:54 UTC. Review the window
-                            │ ▌    alert=Fatal Errors
-  ▾ good-boys ────────────── │ ▌    status=resolved
-    ⊡ agent-kanban-keeper   │ ▌    started=2026-10-08T18:49:10Z
-    ⊡ agent-box-status      │ ▌ Grafana v12.4.3 · 20:54
-    ⊡ agent-support       2 │──────────────────────────────────────────────────────── new ──
-    ⊡ agent-experiments     │ ██ Grafana Alerts  app  21:49
-                            │ ██ ▌ 🚨 CRITICAL · Blocked Groups Growing
-  ▾ Engineering ──────────── │    ▌ What happened: 37 groups are blocked at once…
-    # dev                 @2 │    ▌ Next steps:
-    # github-issues         │    ▌ 1. Open https://app.langwatch.ai/ops - are the blocks…
-                            │    ▌ ⋯ show more
-  ▸ Social · Product · 3 more│    ▌ Grafana v12.4.3 · 21:49
-  ↓ 4 more unread           │
-                            │ ╭ to #prod-alerts-page ───────────── enter sends · ⇧enter line ╮
-                            │ │ ❯ a message for #prod-alerts-page                             │
-                            │ ╰ @ mention · : emoji · ctrl+o file ─────────────── ✎ draft ──╯
-  ↑↓ move · enter open · t thread · . actions · ctrl+k jump
+ loafer  LangWatch    Home  DMs ·2  Activity ·3  Later ·5  Claude       @ 3 mentions   12 unread   ● live
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                             │ # prod-alerts-page   someone must look now
+                             │  Gr   Grafana Alerts  app  20:49
+  ▾ 🚨 big bong              │       ▌ What happened: 37 groups are blocked at once (page threshold
+  # opensource-alerts        │       ▌ 5+). A single hand-unblockable group no longer pages…
+  # prod-alerts-attend       │       ▌ ⋯ show more
+▍ # prod-alerts-page         │
+  # prod-infra-reviews     1 │ ──────────────────────────────────────────────────────────── new ──
+                             │  Gr   Grafana Alerts  app  21:49            ☺ react · ↩ reply · ⋯
+  ▸ Team  4                  │       ▌ 🚨 CRITICAL · Blocked Groups Growing
+  ▸ Social  3                │       ▌ What happened: 37 groups are blocked at once…
+                             │        👍🏻 2   👀 1
+  ▾ good-boys                │
+  ⊡ agent-kanban-keeper      │  Dr   drew  21:52
+  ⊡ agent-support          2 │       here's the bit I'm least sure of:
+                             │        func touch(conv string) {        go
+  ▾ Engineering              │            s.clock++
+  # dev                   @2 │        }
+  # github-issues            │
+  ↓ 4 more unread            │ ╭─────────────────────────────────────────────────────────────────────╮
+                             │ │ ❯ a message for #prod-alerts-page                                   │
+                             │ ╰─────────────────────────────────────────────────────────────────────╯
+  ctrl+n 2 need you  ·  enter open  ·  n next unread  ·  tab messages  ·  q quit
 ```
 
 Notes:
-- **Header**, two rows plus a rule. When the terminal is 100 columns or wider, the logo (below) sits to the left of those two rows, and the header grows to 4 rows, as rush's does. Mockups below omit it.
-  - Row 1: the wordmark (bold italic `loafer`, as rush does), the workspace, the state counts in rush's header style, and connection state on the right.
-  - Row 2: Slack's left rail as rush's top tabs. The active one is a filled chip; badges are `·N`, yellow when they're mentions.
-  - The header, tab row and sidebar sit on the aubergine, and the header's wash ramps into the workspace's colour toward the right edge (rule 2a).
-- **Workspace rail**, only when you're signed in to more than one: four columns down the far left, a step darker than the sidebar. Each workspace is its initials on its colour (`CC` for Crumb & Co, `La` for LangWatch), the one shown marked with the orange `▍`, and under them its mentions (`@2` in yellow, `@+` past nine), else `•` when anything's unread, or a red `✗` once it's signed out.
-- **Sidebar** = rush's list pane.
-  - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. A folded section is `▸ name 3 ──────` with how many it hides, and still lists what has unread, what mentions you and the conversation that's open. Not yet: quiet folded sections joined into one `▸ Social · Product · 3 more` line.
-  - Rows: unread names are bright and bold, read ones plain sub, muted ones faint (and not counted in the header or by `ctrl+n`). On the right, the unread count is dim, and mentions are `@2` in yellow bold.
+- **Ground.** Everything sits on the terminal's own neutral ground: the header, the sidebar and the panes alike, divided by faint rules. Slack's aubergine is an accent, never a ground: lifted to a plum (`Palette.Brand`, 184,128,186 on the dark ground, through `theme.Accent` on others) for the wordmark, the active tab's label and the open conversation's `▍` in the sidebar.
+- **Header**, one row plus a faint rule. Left: the wordmark (bold italic `loafer`, plum), the workspace in sub, then Slack's left rail as rush's top tabs (the active one on the `selBG` chip, its label bold plum; badges `·N`, yellow when they're mentions). Right: `@ 3 mentions` yellow bold, `12 unread` dim, and the connection state. Narrow, the counts shrink to `@3`, then go, then the wordmark goes. Not yet: the logo beside it.
+- **Workspace rail**, only when you're signed in to more than one: four columns down the far left, a step darker than the ground. Each workspace is its initials on its colour (`CC` for Crumb & Co, `La` for LangWatch), the one shown marked with the orange `▍`, and under them its mentions (`@2` in yellow, `@+` past nine), else `•` when anything's unread, or a red `✗` once it's signed out. That chip is the only place a workspace's own colour shows.
+- **Sidebar** = rush's list pane, with a row of air at the top.
+  - Section headings are plain labels, as Slack's: a faint caret (`▾`, `▸` folded) in the glyph column, the name dim, with the section's emoji when the user gave it one, and no rule. A folded section is `▸ Team  4` with how many it hides in faint, and still lists what has unread, what mentions you and the conversation that's open. A blank row comes before a heading only after a conversation, so folded sections stack tight. Not yet: quiet folded sections joined into one line.
+  - Rows: the glyph in dim, unread names bright and bold, read ones plain sub, muted ones faint (and not counted in the header or by `ctrl+n`). Mentions are `@2` in yellow bold on the right. The open conversation is on the `selBG` fill with a plum `▍`; the cursor is the orange `▍` (and the hover fill while the sidebar has focus).
   - `↓ 4 more unread` and `↑ …` at the edges are Slack's "More unread messages" pills, drawn as rush's `↓ N more` chip.
-- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line. One that couldn't be fetched is tried once more when it's next drawn, a minute or more on. The pictures on disk are kept under 64 MB, the oldest going when loafer starts.
+- **Avatars**: every author's is the same 4×2 cells (about square), beside the name and the first line, so the column reads as one thing. Where the terminal draws pictures (kitty, Ghostty) it's the picture, fitted into the 4×2 and centred. Elsewhere, and until the picture lands, it's Slack's letter avatar: the initials bold in near-white on the top row of a 4×2 tile tinted from the user's id (one of six muted shades). One that couldn't be fetched is tried once more when it's next drawn, a minute or more on. The pictures on disk are kept under 64 MB, the oldest going when loafer starts.
 - **Pane header**: rush's chrome-filled block. It shows the channel, its topic dim, members `⊙ 4`, saved `◆`, and search `⌕`. One tab row, with the active tab underlined in orange.
 - **Messages**:
-  - **Header.** An avatar (a 2×1 kitty picture, or initials on a 2×2 tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
-  - **Day dividers** are a dim label centred on nothing, Slack's pill without the pill. The current day sticks to the top as a chrome chip.
-  - **The "new" line** is a full-width orange rule with `new` at the right.
+  - **Header.** The avatar, then the bold name, `app` dim, and the time dim; the body and everything under it hang at the same 5-cell gutter. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
+  - **Dividers** are one family: a thin `─` rule across the pane, one cell in at each end, with its label set into it. **Day dividers** centre the day (`today`, `yesterday`, `monday, 6 october`) in bold sub on a faint rule. **The "new" line** sets `new` in bold orange near the right (`──── new ──`) on a rule of orange taken halfway to the ground (`Palette.NewRule`). The current day sticks to the top as a chrome chip.
   - **The newer pill**: scrolled up, or left back in time by a search, a chip sits centred on the list's last row, `↓ 3 new messages  G` (what's come since you last read it, not counting yours), or `↓ newer messages` where that can't be told. The key is `G` in the messages and `ctrl+end` elsewhere.
   - **Read** is marked as you watch it come in: at the newest, in a focused terminal. A loafer in the background reads nothing until it has focus again.
   - **Attachments and blocks** sit behind a `▌` in their colour. Fields lay out in two columns when there's room. The footer is dim with ` · `. Long bodies fold at 8 rows to `⋯ show more`, in blue.
-  - **Code blocks** are a `panelBG` fill, indented, highlighted with rush's highlighter. Inline code is cText on the chip fill.
-  - **Selected message**: `selBG` fill plus the orange `▍`, like any row. Its actions are in the hint line and the `.` menu, rather than a hover toolbar.
-- **Composer**: rush's input box exactly.
-  - The rounded edge is orange when focused.
-  - The edges carry labels: who it goes to on the top left and what enter does on the top right, hints on the bottom left, and draft state on the bottom right.
-  - Inside are the `❯` and a faint placeholder.
+  - **Code blocks** are a `panelBG` panel as wide as their widest line (32 to 100 cells, never past the message), one cell of padding each side, highlighted with rush's highlighter; the language is dim at the panel's top right. Inline code is cText on the chip fill.
+  - **Reactions** are Slack's pills: ` 👍🏻 2 ` on the chip fill with the count in sub; yours on the warm `askBG` with the count orange and bold. A space between pills, and they wrap a whole pill at a time. Skin tones (`+1::skin-tone-2`) draw as the toned emoji, custom ones as their picture or `:name:` dim. A reaction arriving draws only its own message again.
+  - **Hover**: the message under the pointer takes the `hoverBG` fill, and `☺ react · ↩ reply · ⋯` sits dim at the right of its first row; a click on one does what `r`, `t` or `.` do, and a click anywhere on a message picks it. The list notes which message each of its rows is as it draws, so a motion is a lookup, one within the same message keeps the last frame, and the hover is a restyled copy of the message's kept rows: no message is drawn again for it. Leaving the list or the terminal losing focus lets it go.
+  - **Selected message**: `selBG` fill plus the orange `▍`, like any row. Its actions are in the hint line and the `.` menu.
+- **Composer**: rush's input box, quietened. The rounded edge is faint (`Edge`), orange when focused, and carries no labels in the usual case: the placeholder says where it goes (`a message for # dev`) and the hint line what enter does. The top edge says `editing your message`, `reply in thread` (with the `☐ also #channel` tick on the right) or an attachment's question when there is one. Inside are the `❯` and a faint placeholder.
+- Mockups further down draw an avatar as a short `██`; it is the same 4×2 as here.
+- **Focus**: one place looks live at a time, in orange: the sidebar's `▍` cursor, the message cursor, or the composer's edge (faint otherwise). Away from the sidebar it shows only the open conversation, with the plum `▍`; away from the messages there's no message cursor. The hint line follows focus too.
+- **Hint line**: at most five pairs, for where you are, the rest being in the `.` menu and below (Keys); `ctrl+n N need you` leads in yellow while there are any. In the sidebar `enter open · n next unread · tab messages · q quit`; on a message `. actions · t thread · r react · esc newest`; in the box `enter send · shift+enter new line · ctrl+o attach · esc messages`.
 
 ## Thread open (side pane)
 
@@ -529,7 +520,7 @@ Messages are Slack's mrkdwn, but bots and anything pasted from an editor arrive 
 - **headings**: `#` and `##` bold in bright, deeper ones bold in sub, with a blank row above.
 - **lists**: `-` `*` `+` `•` bullets become `•` `◦` `▪` by depth, `1.` keeps its number, and wrapped lines hang under the text.
 - **tables**: rush's layout. Two columns and five rows or fewer read as `key · value` lines; too narrow for columns, each row is its cells joined by ` · `; otherwise columns as wide as their widest cell, the widest giving up a cell at a time until it fits. The head row is bold with a faint rule under it.
-- **code**: a ``` block sits on the panel ground, cut rather than wrapped at words. If the fence names a language (```go), it's highlighted with rush's highlighter (`photon/hl`: go, js/ts, python, rust, sh, json, yaml, toml, css, sql, ruby, the c family, lua, php, markdown) and the name sits dim in the top right.
+- **code**: a ``` block sits on a panel as wide as its widest line (32 to 100 cells), cut rather than wrapped at words. If the fence names a language (```go), it's highlighted with rush's highlighter (`photon/hl`: go, js/ts, python, rust, sh, json, yaml, toml, css, sql, ruby, the c family, lua, php, markdown) and the name sits dim in the top right.
 - **quotes** `>` get a faint `▏` and sub text; **rules** `---` are a faint line.
 
 Slack's own `rich_text` blocks, which most people's messages carry, are read into the same lines and drawn the same way, so a message looks alike whichever it came as. Emoji in them come with their characters, so they show even past the short table.
@@ -556,7 +547,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
 | `ctrl+end` | the open conversation's newest message, reading it (outside the thread, where it's the thread's newest) |
 
-**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits. Headings are stopped on. Managing it: `z` fold, `m` mute, `*` star, `s` move to a section, `x` leave or close, `b` browse channels, `N` new DM (see Managing conversations).
+**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` or `→` opens it and goes into its messages, `i` into its box, `q` quits. Headings are stopped on. Managing it: `z` fold, `m` mute, `*` star, `s` move to a section, `x` leave or close, `b` browse channels, `N` new DM (see Managing conversations).
 
 **DMs, Activity and Later lists**: `↑↓` or `j k`, `pgup pgdn`, `g G`, `enter` opens it, and in Later `d` done and `x` remove. `tab` goes to the conversation beside them, and `esc` there comes back.
 
@@ -564,7 +555,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 | key | does |
 |---|---|
-| `↑↓` `j k`, `pgup pgdn` | a message, or about a page of them. Going past the oldest fetches older |
+| `↑↓` `j k`, `pgup pgdn` | a message, or about a page of them. Going past the oldest fetches older; `↓` past the newest goes to the box |
 | `{` `}` | to the start of this run of messages by one person, then the run before; the next run |
 | `n` | the first message you hadn't read when you opened it |
 | `@` | the previous mention of you (or @here, @channel), wrapping round |
@@ -584,13 +575,14 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `P` | pin it, or unpin it |
 | `u` | mark unread from here |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
+| `←` | the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
 | `a` | ask Claude about it: the Claude tab, with it and five messages either side attached |
 | `b` `shift+b` | step through its buttons and menus; `enter` presses the chosen one, `esc` lets it go (Block Kit, above) |
 | `i` | write |
 
-**Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
+**Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message (or, with none of yours there, goes up to the messages), `←` in an empty box goes to the sidebar, `esc` (or `shift+tab`) cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
 Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
 
