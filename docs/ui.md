@@ -213,8 +213,14 @@ Rendering:
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
 - **Images** use kitty placeholders up to 12 rows tall, or `▣ name 1200×800` when graphics are off.
+- **Headers** are bold and bright, with a blank row above unless they come first. **Sections** are their text, then their fields, two columns when each gets 20 cells, then the accessory as its chip.
+- A message with blocks shows the blocks and not its text, as Slack does: the text is the notification's fallback. If none of its blocks can be drawn, the text shows instead. One that can't (an `input`, a `table`) is a faint `unsupported block (input)`.
+- **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.
+- **Files** are a line each: `▣` image, `▶` video, `♪` audio, `▤` the rest, then the name (a link to it in Slack), its type and size, dim. A deleted file is a faint `▤ this file was deleted`.
 
-Reactions: chips with the emoji and count. Yours have an orange count, others dim. `☺+` adds one. Custom emoji are 2×1-cell images, or `:name:` in dim.
+For now all of this is read-only: buttons and menus draw, but `tab` and `enter` don't press them yet.
+
+Reactions: chips with the emoji and count. Yours sit on a warm chip with an orange count, others dim. `r` on the message adds one, `1`-`9` toggles one that's there. Custom emoji are 2×1-cell images, or `:name:` in dim.
 
 Mentions inside text:
 - `@Alex` (you) is bold yellow on the `askBG` fill.
@@ -410,7 +416,7 @@ Messages are Slack's mrkdwn, but bots and anything pasted from an editor arrive 
 - **code**: a ``` block sits on the panel ground, cut rather than wrapped at words. If the fence names a language (```go), it's highlighted with rush's highlighter (`photon/hl`: go, js/ts, python, rust, sh, json, yaml, toml, css, sql, ruby, the c family, lua, php, markdown) and the name sits dim in the top right.
 - **quotes** `>` get a faint `▏` and sub text; **rules** `---` are a faint line.
 
-Not yet: Slack's own `rich_text` blocks, which carry the same things more exactly and come with Block Kit.
+Slack's own `rich_text` blocks, which most people's messages carry, are read into the same lines and drawn the same way, so a message looks alike whichever it came as. Emoji in them come with their characters, so they show even past the short table.
 
 ## Keys
 
@@ -422,6 +428,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 |---|---|
 | `ctrl+k` (`/` in the sidebar) | jump to any conversation: what needs you, where you've just been and what's unread first, then fuzzy matching on everything. In the composer with text after the cursor, it cuts to the end of the line instead, as in rush |
 | `ctrl+n` | the next conversation that needs you: a mention, or anything new in a DM. The hint line shows `ctrl+n N need you` in yellow while there are any |
+| `ctrl+f` (`/` in the messages) | search messages; see Search below. From ctrl+k, it searches for what's typed there |
 | `alt+↑` `alt+↓` | the conversation above or below in the sidebar |
 | `alt+shift+↑` `alt+shift+↓` | the unread conversation above or below |
 | `alt+←` `alt+→` | back and forward through the conversations you've visited |
@@ -441,6 +448,8 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `@` | the previous mention of you (or @here, @channel), wrapping round |
 | `g` `G` | oldest, newest |
 | `e` | edit it, if it's yours |
+| `r` | react: a picker over every emoji, yours and the usual ones first. `enter` adds it, or takes it away if it's already yours (marked ✓) |
+| `1`-`9` | toggle the message's nth reaction, in the order they're drawn |
 | `d d` or `delete delete` | bin it, if it's yours |
 | `c` `l` | copy its text, copy a link to it |
 | `o` | open its first link (http, https and mailto only) |
@@ -453,7 +462,11 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 **Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
 
-Not yet: thread keys (`t`, `→`), reactions (`r`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
+**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
+
+**Search**: a box over the screen, as ctrl+k's is. What's typed goes to Slack a quarter second after you stop, with Slack's modifiers as you type them (`in:#dev`, `from:@drew`, `before:2026-10-01`, `after:`, `is:thread`, `-word`), shown in blue. Opened from a conversation with nothing typed, it searches only there, as Slack's ⌘F does; `tab` switches between there and everywhere. Each result is its conversation, who and when, and a line or two with the matched words in orange (Slack's own marks, else the words you typed); replies say `↩ in a thread`. `↑↓` choose, `pgup pgdn` by five, and nearing the end fetches the next page. `enter` goes there with the cursor on it: at once if it's held, else after fetching the messages around it. A reply puts the cursor on its thread's parent. Going past the newest from there (`↓`, `G`, `esc`) or sending fetches the newest again. `esc` closes it, and it opens again as it was left.
+
+Not yet: thread keys (`t`, `→`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
 
@@ -463,6 +476,12 @@ The connection state lives in header row 1:
 - `● live` in green
 - `◌ reconnecting 3s` in yellow
 - signed out, loafer closes and asks you to sign in again, then reopens
+
+**Typing.** `drew is typing…` (or `drew and sam are typing…`, then `several people are typing…`) sits in dim italics on the row above the composer for 5 s after the last `user_typing`, for the open conversation only. Typing in threads isn't shown. One tick is armed while someone is typing, none when nobody is.
+
+**Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
+
+It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
 
 ## Sizes
 

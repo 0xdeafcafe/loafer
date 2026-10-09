@@ -120,6 +120,11 @@ func (m *Model) pick(f func(msgs []slack.Message, at int) int) tea.Cmd {
 			return
 		case i >= len(w.Msgs):
 			m.sel, m.scroll = "", 0
+			if w.Newer && !m.fetching { // back from where a search went
+				m.fetching = true
+				conv := m.open
+				cmd = func() tea.Msg { return olderMsg{m.st.Newest(m.ctx, m.api, conv)} }
+			}
 		default:
 			m.sel = w.Msgs[i].TS
 			if i == 0 && w.More && !m.fetching {
@@ -309,7 +314,7 @@ func spanText(v store.View, s mrkdwn.Span) string {
 		}
 		return "#" + s.Target
 	case mrkdwn.Emoji:
-		e, _ := emoji(s.Text)
+		e, _ := emojiText(s.Text)
 		return e
 	}
 	return s.Text

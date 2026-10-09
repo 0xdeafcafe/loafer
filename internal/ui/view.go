@@ -31,6 +31,7 @@ func (m *Model) View() tea.View {
 	v := tea.NewView(out)
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
+	v.ReportFocus = true // to know when the open conversation is worth a notification
 	v.WindowTitle = "loafer"
 	return v
 }
@@ -59,6 +60,12 @@ func (m *Model) render() []canvas.Row {
 		out = append(out, m.hints(v))
 		if m.bar.on {
 			out = m.overlayJump(v, out)
+		}
+		if m.emo.pick.on {
+			out = m.overlayReact(out)
+		}
+		if m.find.on {
+			out = m.overlaySearch(v, out)
 		}
 	})
 	return out
@@ -169,7 +176,7 @@ func (m *Model) sidebar(v store.View, w, h int) []canvas.Row {
 			}
 			name := it.section
 			if it.emoji != "" {
-				if e, _ := emoji(strings.Trim(it.emoji, ":")); !strings.HasPrefix(e, ":") {
+				if e, std := emojiText(strings.Trim(it.emoji, ":")); std {
 					name = e + " " + name
 				}
 			}
@@ -259,6 +266,9 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	head := []canvas.Row{canvas.Fit(title, w, m.pal.Panel), canvas.Fit(nil, w, ink.Text)}
 
 	box := m.composer(v, c, w, min(6, max(1, h-len(head)-3)))
+	if t := m.typingRow(v, w); t != nil {
+		box = append(t, box...)
+	}
 	listH := max(0, h-len(head)-len(box))
 	list := m.overlayPop(m.messages(v, c, w, listH), w)
 	return append(append(head, list...), box...)
@@ -398,7 +408,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":

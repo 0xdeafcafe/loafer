@@ -161,6 +161,15 @@ search.inline: `{search_session_id,client_req_id,max_ts,min_ts,channel,user,coun
 Channel browse search: `{search_channel_types:["exclude_archived","org_wide"],sort,sort_dir,limit:20,query,cursor,team_ids}`.
 Filter syntax lives in the query string: `from:`, `in:`, `type:`, `creator:`, `is:thread`, plus `before:/after:` (the `is:thread` toggle exists; others by convention).
 
+What loafer uses (UNTESTED against a live workspace): the public `search.messages` with `query`, `page` (from 1), `count=20`,
+`highlight=true`, which takes a session token. Read: `messages.total`, `messages.matches[]` (`channel{id,name,is_im,is_mpim}`, `user`,
+`username`, `ts`, `text`, `permalink`), and the page from `messages.paging{page,pages}` or, failing that, `messages.pagination{page,page_count}`.
+Assumed: highlight marks are U+E000 / U+E001 round each match (the UI lights the query's words itself when they're absent); a reply's
+parent is `thread_ts` on the match or, when that's missing, the permalink's `?thread_ts=`; `in:<#C123>` narrows to a conversation
+(unchecked for DMs, where the UI may need `in:<@U123>`). `cursor` paging (`*`, then `next_cursor`) is documented too but not used.
+Going to a result outside the held window: `conversations.history` with `latest=<ts>&inclusive=true&limit=50` for what's before it,
+then `oldest=<ts>&inclusive=true&limit=50`; Slack fills a page from the newest end, so that second page is only kept when `has_more` is false.
+
 ## 8. Boot, counts, DMs, websocket
 
 FOUND: `client.userBoot`, `client.channels`, `client.dms`, `client.extras`, `client.counts`, `client.init`, `client.gantryBoot`,
@@ -199,6 +208,13 @@ Fetchers FOUND (`conversations.history`, `.replies`, `.historyChanges`, `.view`,
 is not in this cache except the boot one above (`ignore_replies:!0`, `include_stories`, `include_mutation_timestamps`, `no_members`, `canonical_avatars`).
 `include_pin_count`: NOT FOUND. Replies thunk uses `{channelId,threadTs,oldest,latest,limit}` and pages both directions, returning `{msgs,hasMore,deleted}`.
 
+Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/richtext.go`), from Slack's public Block Kit docs, not from a trace:
+- `blocks[]`, each decoded on its own so one unknown block costs only itself. `rich_text` parts: `rich_text_section/list/preformatted/quote`;
+  inline `text` (with `style.bold/italic/strike/code`), `link`, `user`, `channel`, `usergroup`, `broadcast`, `emoji` (with `unicode`), `date`, `color`.
+- UNCERTAIN: `image_width`/`image_height` on stored image blocks and attachments; used when present.
+- UNCERTAIN: an attachment's `ts` is a number on legacy attachments and a string on message unfurls; read as either.
+- `files[]`: `name`, `title`, `mimetype`, `pretty_type`, `size`, `permalink`, `mode` (`tombstone` and `hidden_by_limit` carry no name).
+
 ## Other interesting methods (registry sample)
 
 `chat.postMessage/update/delete/shareMessage`, `reactions.add/get/remove`, `pins.add/list/remove`, `bookmarks.*`, `emoji.*`, `users.list`,
@@ -209,6 +225,24 @@ is not in this cache except the boot one above (`ignore_replies:!0`, `include_st
 ## Composer text on the wire (loafer's assumption)
 
 `chat.postMessage` and `chat.update` take mrkdwn `text`: `<@U123>`, `<#C123>` (the web client adds `|name`, which is optional), `<!here>`, `<!channel>`, `<!everyone>`, links as `<url|label>`, and `&`, `<`, `>` as `&amp;`, `&lt;`, `&gt;`. loafer sends exactly that and has not been run against a live workspace yet. If Slack turns out to want `blocks` rich_text for mentions to ping, the composer's mention list already has what's needed to build them.
+
+## Notification settings and typing (UNCERTAIN, from memory of the web client)
+
+`internal/notify` reads these from `client.userBoot`'s `prefs` and `dnd`, and keeps them up with `pref_change` and `dnd_updated`. None is captured yet, so check each against a DevTools capture; a wrong key only means that setting is ignored.
+
+- `prefs.muted_channels`, `prefs.highlight_words`, `prefs.at_channel_suppressed_channels`: comma separated strings. Fairly sure.
+- `prefs.loud_channels`, `prefs.never_channels`: comma separated ids on everything and on nothing. A guess, and likely legacy.
+- `prefs.all_notifications_prefs`: a string of JSON, `{global: {global_desktop, global_keywords, ...}, channels: {<id>: {desktop, muted, suppress_at_channel, ...}}}`. The level values (`everything`, `mentions`, `nothing`) and the `desktop` and `suppress_at_channel` names are guesses.
+- `dnd`: `{dnd_enabled, next_dnd_start_ts, next_dnd_end_ts, snooze_enabled, snooze_endtime}`, in seconds. In dnd when now is from start to end, or before the snooze ends.
+- `pref_change`: `{name, value}`, the value being what boot has for that name.
+- `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
+- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
+
+## Reactions and emoji (loafer's assumptions)
+
+`reactions.add` and `reactions.remove` take `channel`, `timestamp` and `name`, as the public API does; the registry above lists both but no call site was recovered. Errors loafer treats as "already how you wanted it": `already_reacted` and `no_reaction`. Names are iamcal/emoji-data's `short_name` (`+1`, not its alias `thumbsup`), with skin tones as `name::skin-tone-2` to `6`; loafer files a reaction under that canonical name so Slack's `reaction_added` event lands on the same chip. Two-tone names (`handshake::skin-tone-2-3`) are UNCERTAIN and not drawn as characters.
+
+UNCERTAIN, not used yet: the web client seems to rank its picker by a `emoji_use` entry in `users.prefs` (a JSON map of name to count, by memory), which would give "frequently used" across runs. Loafer keeps this session's reactions instead.
 
 ## Not recovered / suggested next step
 

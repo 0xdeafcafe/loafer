@@ -47,7 +47,7 @@ func (m *Model) refreshPop() {
 	for from > 0 && wordRune(m.input[from-1]) {
 		from--
 	}
-	if from == 0 || (m.input[from-1] != '@' && m.input[from-1] != '#') {
+	if from == 0 || (m.input[from-1] != '@' && m.input[from-1] != '#' && m.input[from-1] != ':') {
 		p.shut = 0
 		return
 	}
@@ -59,10 +59,13 @@ func (m *Model) refreshPop() {
 	trigger, q := m.input[from], string(m.input[from+1:m.cur])
 	p.items = p.items[:0]
 	m.st.Read(func(v store.View) {
-		if trigger == '@' {
+		switch trigger {
+		case '@':
 			p.items = m.people(v, q, p.items)
-		} else {
+		case '#':
 			p.items = m.channels(v, q, p.items)
+		default:
+			p.items = m.shortcodes(v, q, p.items)
 		}
 	})
 	slices.SortFunc(p.items, func(a, b item) int {

@@ -54,6 +54,8 @@ type Model struct {
 	fetching  bool     // older messages are on their way
 	back, fwd []string // conversations visited, for alt+← and alt+→
 	bar       jumper   // ctrl+k
+	emo       emojiUI  // the reaction picker and :sm popup
+	find      finder   // ctrl+f
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -62,6 +64,8 @@ type Model struct {
 	drafts   map[string]draft // what was left written in each conversation
 	editing  string           // the message the composer is changing
 	deleting string           // the message d was pressed on once
+
+	al alerts // notifications and the typing line (alerts.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -108,7 +112,7 @@ type (
 )
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.boot())
+	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot())
 }
 
 func (m *Model) waitStore() tea.Cmd {
@@ -142,6 +146,7 @@ func (m *Model) openConv(id string) tea.Cmd {
 	}
 	m.restore(id)
 	m.open, m.scroll, m.sel, m.deleting = id, 0, "", ""
+	m.watch()
 	if i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id }); i >= 0 {
 		m.sideAt = i
 	}
@@ -202,6 +207,9 @@ func (m *Model) send() tea.Cmd {
 		msg, err := m.api.Post(m.ctx, conv, text, "")
 		if err == nil {
 			m.st.Add(conv, msg) // before the websocket's copy, if it's slow
+			if err := m.st.Newest(m.ctx, m.api, conv); err != nil {
+				slog.Warn("newest", "conv", conv, "err", err) // left back where a search went
+			}
 		}
 		return sentMsg{err}
 	}
@@ -245,7 +253,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
 		}
-		return m, cmd
+		return m, tea.Batch(cmd, m.watchTyping())
 	case bootedMsg:
 		switch {
 		case msg.err == nil:
@@ -279,11 +287,19 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.say("✗ couldn't send: "+msg.err.Error(), true)
 		}
 		return m, m.markRead()
+	case reactedMsg:
+		if msg.err != nil {
+			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
+		}
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
-			return m, m.say("couldn't fetch older messages: "+msg.err.Error(), true)
+			return m, m.say("couldn't fetch messages: "+msg.err.Error(), true)
 		}
+	case searchTickMsg, searchedMsg, foundMsg:
+		return m, m.searched(msg)
+	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
+		return m, m.alert(msg)
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""
@@ -297,6 +313,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.bar.on {
 			m.bar.query = append(m.bar.query, []rune(strings.ReplaceAll(msg.Content, "\n", " "))...)
 			m.st.Read(m.buildJump)
+		} else if m.find.on {
+			m.find.query = append(m.find.query, []rune(strings.ReplaceAll(msg.Content, "\n", " "))...)
+			return m, m.edited()
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
 			m.refreshPop()
@@ -329,6 +348,12 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.bar.on && s != "ctrl+c" && s != "f12" {
 		return m.jumpKey(k)
+	}
+	if m.emo.pick.on && s != "ctrl+c" && s != "f12" {
+		return m.reactKey(k)
+	}
+	if m.find.on && s != "ctrl+c" && s != "f12" {
+		return m.searchKey(k)
 	}
 	if m.focus == onCompose && m.pop.on && m.popKey(s) {
 		return nil
@@ -375,6 +400,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		}
 		m.openJump()
 		return nil
+	case "ctrl+f":
+		m.openSearch()
+		return nil
 	case "alt+left":
 		return m.goBack()
 	case "alt+right":
@@ -394,7 +422,7 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 // setFocus moves focus to f; the message cursor starts on the newest
 // message, and goes when focus leaves.
 func (m *Model) setFocus(f focus) {
-	if f == onMsgs && m.focus != onMsgs {
+	if f == onMsgs && m.focus != onMsgs && m.sel == "" { // after an edit, stay on what was edited
 		m.pick(by(-1))
 	}
 	if f != onMsgs {
@@ -459,12 +487,19 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.toNew()
 	case "@":
 		return m.toMention()
-	case "e", "c", "l", "o", "d", "delete":
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		return m.reactNth(int(s[0] - '0'))
+	case "/":
+		m.openSearch()
+	case "r", "e", "c", "l", "o", "d", "delete":
 		msg, ok := m.selected()
 		if !ok {
 			return m.say("pick a message first (↑)", false)
 		}
 		switch s {
+		case "r":
+			m.reactPicker(msg)
+			return nil
 		case "e":
 			return m.edit(msg)
 		case "d", "delete":
@@ -477,8 +512,7 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.openLink(msg)
 	case "esc", "left", "h":
 		if m.sel != "" {
-			m.sel, m.scroll = "", 0
-			return nil
+			return m.pick(newest)
 		}
 		m.setFocus(onSide)
 	case "i", "a", "enter":
