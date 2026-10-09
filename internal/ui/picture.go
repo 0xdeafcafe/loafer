@@ -41,9 +41,10 @@ func (m *Model) startPics() tea.Cmd {
 }
 
 func (m *Model) waitPics() tea.Cmd {
+	set := pics // read here, on the ui goroutine, not in the Cmd's
 	return func() tea.Msg {
 		select {
-		case <-pics.Landed():
+		case <-set.Landed():
 			return picsMsg{}
 		case <-m.ctx.Done():
 			return nil
