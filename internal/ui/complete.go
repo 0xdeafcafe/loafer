@@ -7,7 +7,6 @@ import (
 
 	"github.com/0xdeafcafe/loafer/internal/store"
 	"github.com/0xdeafcafe/photon/canvas"
-	"github.com/0xdeafcafe/photon/fuzzy"
 )
 
 // Typing @ or # in the composer opens a small list above the box. An
@@ -68,13 +67,12 @@ func (m *Model) refreshPop() {
 			p.items = m.shortcodes(v, q, p.items)
 		}
 	})
-	slices.SortFunc(p.items, func(a, b item) int {
+	p.items = top(p.items, popCap, func(a, b item) int {
 		if a.score != b.score {
 			return b.score - a.score
 		}
-		return strings.Compare(strings.ToLower(a.label), strings.ToLower(b.label))
+		return compareFold(a.label, b.label)
 	})
-	p.items = p.items[:min(len(p.items), popCap)]
 	p.on, p.from, p.at = len(p.items) > 0, from, 0
 }
 
@@ -105,8 +103,8 @@ func (m *Model) people(v store.View, q string, out []item) []item {
 		if p.Deleted || p.ID == "" || (p.Bot && q == "") {
 			return
 		}
-		s1, lit, ok1 := fuzzy.Match(q, p.Name)
-		s2, _, ok2 := fuzzy.Match(q, p.Handle)
+		s1, lit, ok1 := match(q, p.Name)
+		s2, _, ok2 := match(q, p.Handle)
 		if !ok1 && !ok2 {
 			return
 		}
@@ -136,7 +134,7 @@ func (m *Model) people(v store.View, q string, out []item) []item {
 		return out
 	}
 	for _, s := range [...][2]string{{"here", "everyone active in this channel"}, {"channel", "everyone in this channel"}, {"everyone", "everyone in the workspace"}} {
-		if score, lit, ok := fuzzy.Match(q, s[0]); ok {
+		if score, lit, ok := match(q, s[0]); ok {
 			it := item{label: "@" + s[0], detail: s[1], code: "<!" + s[0] + ">", score: score + 5}
 			for _, i := range lit {
 				it.lit = append(it.lit, i+1)
@@ -154,7 +152,7 @@ func (m *Model) channels(v store.View, q string, out []item) []item {
 		if c == nil || (c.Kind != store.Channel && c.Kind != store.Private) || c.Archived {
 			continue
 		}
-		score, lit, ok := fuzzy.Match(q, c.Name)
+		score, lit, ok := match(q, c.Name)
 		if !ok {
 			continue
 		}

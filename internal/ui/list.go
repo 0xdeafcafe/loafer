@@ -149,8 +149,11 @@ func (m *Model) messages(v store.View, c *store.Conv, w, h int) []canvas.Row {
 	key := indexKey{c.ID, msgs[0].TS, msgs[len(msgs)-1].TS, m.newAt, len(msgs), w, v.Names()}
 	if key != m.indexOf {
 		hs := make([]int, len(msgs))
+		kept := m.counted(key, msgs)
 		for i := range msgs {
-			if n, ok := m.heights[msgs[i].TS]; ok {
+			if i < kept {
+				hs[i] = m.index.Height(i)
+			} else if n, ok := m.heights[msgs[i].TS]; ok {
 				hs[i] = n
 			} else {
 				hs[i] = m.estimate(v, msgs, i, w)

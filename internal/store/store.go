@@ -33,6 +33,7 @@ type Store struct {
 	threads  map[string]*Window // the threads looked at lately (thread.go)
 	clock    uint64
 	names    uint64 // goes up when people or emoji change, which drawn messages show
+	side     uint64 // goes up when the sidebar's shape may have changed (Layout)
 	link     string // the websocket: connecting, live or offline; "" before it's tried
 	tabs     tabs   // the DMs, Activity and Later lists (tabs.go)
 
@@ -96,6 +97,7 @@ func (s *Store) ApplyBoot(b slack.UserBoot) {
 }
 
 func (s *Store) putConv(c slack.Conversation) {
+	s.side++
 	if c.IsArchived || (!c.IsMember && !c.IsIM && !c.IsMPIM) {
 		delete(s.convs, c.ID)
 		return
@@ -162,18 +164,25 @@ func (s *Store) ApplyCounts(c slack.Counts) {
 				}
 			}
 		}
+		s.side++ // DMs are in order of their latest
 		s.tabs.counts(c)
 	})
 }
 
-// ApplyPeople takes a page of users.list.
+// ApplyPeople takes a page of users.list. Names only go up when someone
+// has changed, so a boot over a warm cache keeps what's drawn.
 func (s *Store) ApplyPeople(us []slack.User) {
 	s.update(func() {
+		changed := false
 		for _, u := range us {
 			p := person(u)
-			s.people[p.ID] = &p
+			if q := s.people[p.ID]; q == nil || *q != p {
+				s.people[p.ID], changed = &p, true
+			}
 		}
-		s.names++
+		if changed {
+			s.names++
+		}
 	})
 }
 
@@ -214,7 +223,7 @@ func (s *Store) ApplySections(ss []slack.Section) {
 				Convs: y.Channels.IDs, Collapsed: y.Collapsed})
 		}
 	}
-	s.update(func() { s.sections = out })
+	s.update(func() { s.sections, s.side = out, s.side+1 })
 }
 
 // SetWindow takes a page from History (newest first, as Slack sends it)

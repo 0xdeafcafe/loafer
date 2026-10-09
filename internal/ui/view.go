@@ -42,20 +42,13 @@ func (m *Model) render() []canvas.Row {
 	if m.w < 20 || m.h < 8 {
 		return []canvas.Row{{canvas.T("loafer needs a bigger window", m.pal.Main.Dim)}}
 	}
-	var out []canvas.Row
+	out := make([]canvas.Row, 0, m.h)
 	m.st.Read(func(v store.View) {
-		if m.st.Version() != m.sideSeen {
-			m.buildSide(v)
-			m.sideSeen = m.st.Version()
-		}
+		m.refreshSide(v)
 		out = append(out, m.header(v)...)
 		bodyH := m.h - headerH - 1
 		sw, side := m.left(v, bodyH)
-		div := make([]canvas.Row, bodyH)
-		for i := range div {
-			div[i] = canvas.Row{canvas.T("│", m.pal.Main.Faint)}
-		}
-		out = append(out, canvas.Join(side, div, m.panes(v, m.w-sw-1, bodyH))...)
+		out = append(out, m.join(side, m.panes(v, m.w-sw-1, bodyH), bodyH)...)
 		out = append(out, m.hints(v))
 		if m.bar.on {
 			out = m.overlayJump(v, out)
@@ -77,15 +70,7 @@ func (m *Model) render() []canvas.Row {
 
 func (m *Model) header(v store.View) []canvas.Row {
 	ink := m.pal.Side
-	mentions, unread := 0, 0
-	for _, it := range m.side {
-		if c := v.Conv(it.conv); c != nil {
-			mentions += c.Mentions
-			if c.Unread {
-				unread++
-			}
-		}
-	}
+	mentions, unread := m.sc.mentions, m.sc.unread
 	row1 := canvas.Row{canvas.T(" loafer", ink.Bright.With(canvas.Bold|canvas.Italic)), canvas.T("  "+v.Team().Name, ink.Text)}
 	if mentions > 0 {
 		row1 = append(row1, canvas.T(fmt.Sprintf("   @ %d mentions", mentions), m.pal.SideYellow.With(canvas.Bold)))
@@ -186,7 +171,7 @@ func (m *Model) sidebar(v store.View, w, h int) []canvas.Row {
 		if c == nil {
 			continue
 		}
-		rows = append(rows, m.sideRow(v, c, w, i == m.sideAt, c.ID == m.open))
+		rows = append(rows, m.keptSideRow(v, c, w, i == m.sideAt, c.ID == m.open))
 	}
 	for len(rows) < h {
 		rows = append(rows, canvas.Fit(nil, w, ink.Text))
@@ -424,12 +409,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	default:
 		pairs = [][2]string{{"enter", "send"}, {"ctrl+o", "attach"}, {"↑", "edit last"}, {"alt+↑↓", "channels"}, {"alt+shift+↑↓", "unread"}, {"esc", "messages"}}
 	}
-	needs := 0
-	for _, it := range m.side {
-		if c := v.Conv(it.conv); c != nil && needsYou(c) {
-			needs++
-		}
-	}
+	needs := m.sc.needs
 	var lead canvas.Row
 	if needs > 0 {
 		lead = canvas.Row{canvas.T(" ctrl+n", m.pal.Yellow.With(canvas.Bold)), canvas.T(fmt.Sprintf(" %d need you", needs), m.pal.Yellow), canvas.T("  ·  ", ink.Faint)}
