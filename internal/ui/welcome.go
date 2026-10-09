@@ -172,8 +172,8 @@ func (m *Model) drawWelcome(k welKey) []canvas.Row {
 	}
 	hello := welPart{rows: []canvas.Row{title}}
 	intro := welPart{rows: []canvas.Row{title}}
-	for _, s := range []string{team + " is new to loafer, so it's fetching everything once.", "next time it opens from the cache, straight away."} {
-		intro.rows = append(intro.rows, canvas.Wrap(canvas.Row{canvas.T(s, ink.Sub)}, max(10, k.w-4))...)
+	for _, s := range []string{team + " is new to loafer, so it's fetching it all once.", "next time it opens from the cache, straight away."} {
+		intro.rows = append(intro.rows, canvas.Wrap(canvas.Row{canvas.T(s, ink.Sub)}, max(10, k.w-2))...)
 	}
 
 	steps := welPart{block: true}
@@ -224,21 +224,24 @@ func (m *Model) drawWelcome(k welKey) []canvas.Row {
 		return ""
 	}
 	step(state(store.StepBoot, !k.out), "the workspace", detail(store.StepBoot, p.Convs, "conversations"))
-	people := "so far"
-	if p.Has(store.StepPeople) {
-		people = "in all"
+	people, n := "in all", p.People
+	if !p.Has(store.StepPeople) {
+		people = "so far"
+		if n < 2 {
+			n = 0 // only you, from boot: users.list hasn't answered yet
+		}
 	}
-	step(state(store.StepPeople, !k.out), "people", detail(store.StepPeople, p.People, people))
+	step(state(store.StepPeople, !k.out), "people", detail(store.StepPeople, n, people))
 	step(state(store.StepSections, !k.out), "channels and sections", detail(store.StepSections, 0, ""))
 	step(state(store.StepCounts, bootOK), "unread counts", detail(store.StepCounts, 0, ""))
 	step(state(store.StepEmoji, !k.out), "emoji", detail(store.StepEmoji, p.Emoji, "of your own"))
 
-	keys := [][2]string{
-		{"ctrl+k", "jump to anything"},
-		{"ctrl+n", "the next thing that needs you"},
-		{"alt+1…5", "home, dms, activity, later, claude"},
-		{"tab", "sidebar, messages, the box"},
-		{".", "all you can do with a message"},
+	keys := [][3]string{ // the key, what it does, and that in short
+		{"ctrl+k", "jump to anything", "jump"},
+		{"ctrl+n", "the next thing that needs you", "what needs you"},
+		{"tab", "sidebar, messages, the box", "move"},
+		{"alt+1…5", "home, dms, activity, later, claude", "tabs"},
+		{".", "all you can do with a message", "actions"},
 	}
 	full := welPart{block: true}
 	for _, kv := range keys {
@@ -249,8 +252,7 @@ func (m *Model) drawWelcome(k welKey) []canvas.Row {
 		if i > 0 {
 			line = append(line, canvas.T(" · ", ink.Faint))
 		}
-		short := strings.SplitN(kv[1], ",", 2)[0]
-		line = append(line, canvas.T(kv[0], ink.Text.With(canvas.Bold)), canvas.T(" "+short, ink.Dim))
+		line = append(line, canvas.T(kv[0], ink.Text.With(canvas.Bold)), canvas.T(" "+kv[2], ink.Dim))
 	}
 	compact := welPart{rows: canvas.Wrap(line, max(10, k.w-2))}
 
