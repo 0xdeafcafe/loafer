@@ -310,6 +310,13 @@ func spanText(v store.View, s mrkdwn.Span) string {
 			return "#" + c.Name
 		}
 		return "#" + s.Target
+	case mrkdwn.Group:
+		if g, ok := v.Group(s.Target); ok {
+			return "@" + g.Handle
+		}
+		if s.Text == "" {
+			return "@" + s.Target
+		}
 	case mrkdwn.Emoji:
 		e, _ := emojiText(s.Text)
 		return e

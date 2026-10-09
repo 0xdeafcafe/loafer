@@ -177,6 +177,20 @@ So: the click sends `blocks.actions` with a `client_token`; the app calls `views
 carrying the same `client_token`, `view`, `view_id`, `view_type` (`modal`, `home`, ...), `previous_view_id` (for push/stack), `timeout_range`.
 `view_updated {view_id, app_id, view}`. Edit-hash container key is `${viewId}_${viewHash}`. Home tab: `view_type==="home"` with `channel_id`.
 
+What loafer sends and reads (`internal/slack/blocks.go`, `internal/store/modal.go`), none of it checked against a DevTools capture:
+- `blocks.actions` with `service_id` (the message's `bot_id`), `app_id` (the message's `app_id`, when it has one), `service_team_id`,
+  `client_token` (`web-<ms>-<n>`), `container` `{type:"message",channel_id,message_ts}` and `actions` a one-item array. That item is a GUESS from
+  the public `block_actions` payload: `{type, action_id, block_id, text, value, action_ts}`, plus `selected_option {text,value}` for a static
+  select or overflow and `selected_date` for a datepicker. No `state`, no `function_execution_id`. Thread messages send the same container.
+- `view_opened` is taken only when its `client_token` is one loafer sent lately (the last 8), or its `previous_view_id` is a view it holds;
+  `view_type` (or `view.type`) must be `modal`. `view` is read as an object, or as a string of JSON if it comes that way (UNCERTAIN).
+  `view_pushed` (GUESSED, by analogy) stacks like it, `view_updated` replaces by `view_id`, `view_closed` (GUESSED) drops that view and those on it.
+- `views.submit` (args NOT FOUND, GUESSED): `view_id`, `view_hash` (the view's `hash`), `client_token`, and `state` as `{"values":{block_id:
+  {action_id:{type, value | selected_option | selected_options | selected_date}}}}`, empty ones as `null`. Read back, also GUESSED: `response_action`
+  and `errors` (block_id to message), as an app answers `view_submission`. Errors show under their inputs; `update` and `push` wait for the socket;
+  anything else closes the modal (`clear` only closes the top one).
+- `views.close` (args NOT FOUND, GUESSED): `view_id`, `client_token`. The modal goes at once; a failure is only flashed.
+
 ## 7. Search
 
 FOUND methods: `search.modules.ai/channels/external/files/topResults/workObjects`, `search.inline`, `search.team`, `search.enterprise`,
@@ -282,7 +296,7 @@ The web client's, with guessed arguments:
 - `dnd`: `{dnd_enabled, next_dnd_start_ts, next_dnd_end_ts, snooze_enabled, snooze_endtime}`, in seconds. In dnd when now is from start to end, or before the snooze ends.
 - `pref_change`: `{name, value}`, the value being what boot has for that name.
 - `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
-- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
+- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence is below.
 
 ## Reactions and emoji (loafer's assumptions)
 
@@ -313,3 +327,13 @@ Saving uses `Client.Download`, `Fetch`'s GET (cookie to Slack's hosts only) stre
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,
 flannel method enum, `conversations.history` extras. Best next source: DevTools on the running Electron app (network tab shows `/api/<method>` form bodies,
 redact `token`), or the non-minified `gantry-v2` source maps if cached.
+
+## People: presence, profiles, user groups (UNCERTAIN, from memory of the web client and the public API)
+
+- `presence_sub`: `{"type":"presence_sub","ids":[...]}` sent over the websocket, 100 ms after the last id added (this one is recovered from the bundle, above). It belongs to the socket, so loafer sends everyone again after a reconnect. It never unsubscribes. Whether a large id list wants chunking is unknown.
+- `presence_change`: `{user, presence}` or, with `batch_presence_aware=1`, `{users: [...], presence}`. `presence` is `active` or `away`. The batch key name `users` is a guess. `manual_presence_change`: `{presence}`, which is you.
+- `user_change` carries the whole user. `user_status_changed` is assumed to carry `user` with at least `id` and `profile.status_*`; loafer takes a user without a name as a status change only. Status expiry is `profile.status_expiration`, unix seconds, 0 for none.
+- `users.info` with `user`, answering `{user}`; `users.list` fields `profile.title`, `email`, `pronouns` (pronouns may be absent or sit in a custom field), `tz`. Email is present only where the workspace shows it.
+- `usergroups.list` with `include_count=true`, answering `{usergroups: [{id, handle, name, user_count, date_delete}]}`. A failure is only logged. `subteam_created` and `subteam_updated` are assumed to carry the group whole as `subteam`; `date_delete` non-zero means gone. `subteam_members_changed` and `subteam_self_*` are ignored.
+- `conversations.open` with `users=<id>` and `return_im=true`, answering `{channel}`; `already_open` is a normal answer carrying the channel.
+- Sent as `<!subteam^S123|@handle>`, read as `<!subteam^S123>` with or without a label, and as a rich_text `usergroup` element.

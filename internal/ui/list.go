@@ -99,7 +99,7 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 		m.drawn.Put(key, drawn, len(drawn))
 	}
 	if msg.TS == m.sel && m.focus == onMsgs {
-		drawn = m.picked(drawn)
+		drawn = m.lit(msg.TS, m.picked(drawn))
 	}
 	var above []canvas.Row
 	if newLine {

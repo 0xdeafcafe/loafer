@@ -76,21 +76,29 @@ type block struct {
 	ImageHeight int `json:"image_height"`
 }
 
-// element is an interactive element or a context's text or image. The
-// interactive lane adds action_id, value and the rest when buttons press.
+// element is an interactive element or a context's text or image; the
+// rest of what pressing one needs is in press.go.
 type element struct {
 	Type          string   `json:"type"`
 	Text          *textObj `json:"text"`
 	URL           string   `json:"url"`
 	Style         string   `json:"style"` // a button's primary or danger
 	Placeholder   *textObj `json:"placeholder"`
-	InitialOption *struct {
-		Text textObj `json:"text"`
-	} `json:"initial_option"`
-	InitialDate string `json:"initial_date"`
-	InitialTime string `json:"initial_time"`
-	AltText     string `json:"alt_text"`
-	ImageURL    string `json:"image_url"` // a context's image
+	InitialOption *option  `json:"initial_option"`
+	InitialDate   string   `json:"initial_date"`
+	InitialTime   string   `json:"initial_time"`
+	AltText       string   `json:"alt_text"`
+	ImageURL      string   `json:"image_url"` // a context's image
+
+	ActionID       string   `json:"action_id"`
+	Value          string   `json:"value"`
+	Options        []option `json:"options"`
+	InitialOptions []option `json:"initial_options"` // checkboxes
+	InitialValue   string   `json:"initial_value"`   // plain_text_input
+	Multiline      bool     `json:"multiline"`
+	OptionGroups   []struct {
+		Options []option `json:"options"`
+	} `json:"option_groups"`
 }
 
 // bodyRows is a message's text, or its blocks when it has them. Slack
@@ -214,8 +222,7 @@ func imageRows(p *Palette, src, label string, iw, ih, w int) []canvas.Row {
 }
 
 // chip is an interactive element as it reads: a button's label on its
-// fill, a menu's choice with ▾. Nothing presses yet; the interactive lane
-// hangs its targets here (docs/ui.md, Block Kit).
+// fill, a menu's choice with ▾. press.go finds them again to press.
 func chip(p *Palette, v store.View, e element) canvas.Seg {
 	switch e.Type {
 	case "button":

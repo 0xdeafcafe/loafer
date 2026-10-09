@@ -22,7 +22,7 @@ import (
 // message lists what can be done to it, each with its key, and the keys
 // work without the menu: do is the one place they all land. What changes
 // changes here at once and at Slack in the background, put back if Slack
-// refuses (act).
+// refuses (try).
 
 type actions struct {
 	menu   menu
@@ -77,7 +77,7 @@ func nineOn(t time.Time) time.Time {
 	return time.Date(y, mo, d, 9, 0, 0, 0, t.Location())
 }
 
-// actKey is `.`, or one of the keys that only the menu had: u s p m.
+// actKey is `.`, or one of the keys that only the menu had: u s P m.
 func (m *Model) actKey(s string) tea.Cmd {
 	msg, ok := m.selected()
 	if !ok {
@@ -105,7 +105,7 @@ func (m *Model) do(key string, msg slack.Message) tea.Cmd {
 		return m.toggleSave(m.open, msg)
 	case "m":
 		m.acts.menu = menu{on: true, remind: true, thread: m.th.in, conv: m.open, msg: msg}
-	case "p":
+	case "P":
 		return m.togglePin(m.open, msg)
 	case "u":
 		return m.markUnread(msg)
@@ -123,9 +123,9 @@ func (m *Model) do(key string, msg slack.Message) tea.Cmd {
 	return nil
 }
 
-// act runs call in the background, putting things back with undo if it
+// try runs call in the background, putting things back with undo if it
 // fails. what is what it was, for the failure's flash.
-func (m *Model) act(what string, call func() error, undo func()) tea.Cmd {
+func (m *Model) try(what string, call func() error, undo func()) tea.Cmd {
 	return func() tea.Msg {
 		err := call()
 		if err != nil && undo != nil {
@@ -165,7 +165,7 @@ func (m *Model) markUnread(msg slack.Message) tea.Cmd {
 	})
 	m.st.MarkUnread(conv, ts)
 	m.acts.unread, m.newAt = conv, ts
-	return tea.Batch(m.say("marked unread from here", false), m.act("mark it unread", func() error { return m.api.Mark(m.ctx, conv, ts) }, nil))
+	return tea.Batch(m.say("marked unread from here", false), m.try("mark it unread", func() error { return m.api.Mark(m.ctx, conv, ts) }, nil))
 }
 
 // tsBefore is a ts a microsecond earlier.
@@ -192,12 +192,12 @@ func (m *Model) toggleSave(conv string, msg slack.Message) tea.Cmd {
 func (m *Model) setSaved(conv string, msg slack.Message, save bool) tea.Cmd {
 	if save {
 		m.st.SaveLater(conv, msg, 0)
-		return tea.Batch(m.say("saved for later", false), m.act("save it", func() error {
+		return tea.Batch(m.say("saved for later", false), m.try("save it", func() error {
 			return m.api.SaveMessage(m.ctx, conv, msg.TS, 0)
 		}, func() { m.st.Unsave(conv, msg.TS) }))
 	}
 	m.st.Unsave(conv, msg.TS)
-	return tea.Batch(m.say("taken off later", false), m.act("take it off later", func() error {
+	return tea.Batch(m.say("taken off later", false), m.try("take it off later", func() error {
 		return m.api.Unsave(m.ctx, "message", conv, msg.TS)
 	}, nil))
 }
@@ -208,7 +208,7 @@ func (m *Model) remindAt(conv string, msg slack.Message, i int) tea.Cmd {
 	c := remindChoices[i]
 	due := c.at(time.Now())
 	m.st.SaveLater(conv, msg, due.Unix())
-	return tea.Batch(m.say("saved for later, due "+clock(due, time.Now()), false), m.act("remind you", func() error {
+	return tea.Batch(m.say("saved for later, due "+clock(due, time.Now()), false), m.try("remind you", func() error {
 		return m.api.SaveMessage(m.ctx, conv, msg.TS, due.Unix())
 	}, func() { _ = m.st.Fetch(m.ctx, m.api, store.LaterList) }))
 }
@@ -221,7 +221,7 @@ func (m *Model) togglePin(conv string, msg slack.Message) tea.Cmd {
 	if !pin {
 		what, said = "unpin it", "unpinned"
 	}
-	return tea.Batch(m.say(said, false), m.act(what, func() error {
+	return tea.Batch(m.say(said, false), m.try(what, func() error {
 		err := m.api.Pin(m.ctx, conv, msg.TS, pin)
 		var e *slack.Error
 		if errors.As(err, &e) && (e.Code == "already_pinned" || e.Code == "no_pin") {

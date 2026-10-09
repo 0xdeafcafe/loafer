@@ -98,6 +98,9 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 			chin = canvas.T("  ", ink.Text)
 		}
 		head := canvas.Row{f, canvas.T(" ", ink.Text), canvas.T(name, ink.Bright.With(canvas.Bold))}
+		if g := statusGlyph(v, m.User); g != "" {
+			head = append(head, canvas.T(" "+g, ink.Text))
+		}
 		if app {
 			head = append(head, canvas.T("  ", ink.Text), canvas.T("app", ink.Dim))
 		}

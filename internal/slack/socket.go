@@ -63,6 +63,8 @@ func (c *Client) Listen(ctx context.Context, to string, on func(Event) error) er
 	// and closed when even that brings nothing back.
 	var heard atomic.Int64
 	heard.Store(time.Now().UnixNano())
+	out := c.pres.up() // frames to send, which Watch queues
+	defer c.pres.down()
 	go func() {
 		t := time.NewTicker(idle / 3)
 		defer t.Stop()
@@ -70,6 +72,9 @@ func (c *Client) Listen(ctx context.Context, to string, on func(Event) error) er
 			select {
 			case <-ctx.Done():
 				return
+			case b := <-out:
+				_ = conn.Write(ctx, websocket.MessageText, b)
+				continue
 			case <-t.C:
 			}
 			switch quiet := time.Since(time.Unix(0, heard.Load())); {

@@ -66,7 +66,7 @@ func TestE2EMenu(t *testing.T) {
 	}
 
 	// Pin through the menu's key, then unpin by the plain one.
-	d.press(r('.'), r('p'))
+	d.press(r('.'), r('P'))
 	d.until("the pin", func() bool { return d.has("⚑ pinned") })
 	d.until("Slack's word", func() bool { return slices.Contains(d.srv.Messages(slacktest.Dev)[0].PinnedTo, slacktest.Dev) })
 	d.until("the pin event applied", func() bool { return d.calls("pins.add") == 1 })
@@ -74,7 +74,7 @@ func TestE2EMenu(t *testing.T) {
 	if !d.has("unpin") {
 		t.Fatalf("the menu should offer to unpin:\n%s", d.text)
 	}
-	d.press(esc, r('p'))
+	d.press(esc, r('P'))
 	d.until("the unpin", func() bool { return !d.has("⚑ pinned") && len(d.srv.Messages(slacktest.Dev)[0].PinnedTo) == 0 })
 }
 
@@ -176,7 +176,7 @@ func TestE2EMenuInThread(t *testing.T) {
 	if !d.has("Actions") || d.has("↩ reply in thread") || d.has("● mark unread") || !d.has("✗ delete") {
 		t.Fatalf("a reply's menu is the conversation's less threading and unread, plus yours:\n%s", d.text)
 	}
-	d.press(r('p'))
+	d.press(r('P'))
 	d.until("the reply pinned", func() bool { return d.has("⚑ pinned") && d.calls("pins.add") == 1 })
 	for _, c := range d.srv.Calls() {
 		if c.Method == "pins.add" && c.Form.Get("timestamp") != reply {

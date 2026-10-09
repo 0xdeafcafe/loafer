@@ -59,9 +59,9 @@ func (m *Model) menuList(v store.View) []menuItem {
 	}
 	add("m", "◷", "remind me ▸")
 	if slices.Contains(msg.PinnedTo, mn.conv) {
-		add("p", "⚑", "unpin")
+		add("P", "⚑", "unpin")
 	} else {
-		add("p", "⚑", "pin")
+		add("P", "⚑", "pin")
 	}
 	if !mn.thread {
 		add("u", "●", "mark unread from here")
