@@ -462,7 +462,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `d d` or `delete delete` | bin it, if it's yours |
 | `c` `l` | copy its text, copy a link to it |
 | `o` | open its first link (http, https and mailto only) |
-| `s` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
+| `D` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
@@ -479,7 +479,7 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 `enter` sends them, with what's written as their comment (a box of only chips sends too). The box empties, and a bar with a percent stands where the chips were while the file goes up, straight from disk and reported about ten times a second. When it's sent the message comes in over the websocket. One upload goes at a time. In a thread's box it's a reply, and `ctrl+b` sends it to the channel as well. A file past Slack's 1 GB limit, an empty one, or one that isn't a file is refused when you attach it, with the reason. If the upload fails, the chips and the words go back in the box.
 
-On a message with files, `s` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
+On a message with files, `D` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
 **Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 
