@@ -17,21 +17,27 @@ import (
 // anywhere": with nothing typed it offers what needs you, where you've
 // just been and what's unread; typing narrows every conversation by
 // fuzzy match, rush's scorer, nudged toward the unread and the recent.
-// ponytail: conversations only; people without a DM yet, messages
-// (search.messages) and commands join it at step 10.
+// `>` first lists every action instead (actions.go's allActions), and
+// `#` first browses the channels you're not in.
 
 type jumper struct {
 	on    bool
 	query []rune
 	at    int
 	items []jumpItem
+	mn    menu   // the current message, for `>`'s message actions
+	msgOK bool   // there is one
+	conv  string // the current conversation, for `>`'s conversation actions
 }
 
 type jumpItem struct {
 	conv, section string
 	lit           []int // runes of the title the query matched
 	score         int
-	ws            *Model // a workspace to switch to, instead of a conversation (workspaces.go)
+	ws            *Model  // a workspace to switch to, instead of a conversation (workspaces.go)
+	act           *action // an action to do, instead (`>`)
+	label         string  // the action's, as things stand
+	off           bool    // it has no message or conversation to act on
 }
 
 const jumpCap = 50
@@ -39,14 +45,66 @@ const jumpCap = 50
 var jumpGlyph = map[store.Kind]string{store.Channel: "# ", store.Private: "⊡ ", store.IM: "● ", store.MPIM: "⁂ "}
 
 func (m *Model) openJump() {
-	m.bar = jumper{on: true}
-	m.st.Read(m.buildJump)
+	msg, ok, thread := m.currentMsg()
+	m.bar = jumper{on: true, mn: menu{thread: thread, conv: m.open, msg: msg}, msgOK: ok, conv: m.currentConv()}
+	m.st.Read(func(v store.View) {
+		if ok {
+			m.bar.mn.link = len(webLinks(m.asDrawn(v, &msg))) > 0
+		}
+		m.buildJump(v)
+	})
+}
+
+// buildActions lists the actions the query after `>` matches: with
+// nothing more typed, the message's, the conversation's, then the rest.
+// Those with nothing to act on are faint.
+func (m *Model) buildActions(v store.View) {
+	j := &m.bar
+	q := strings.TrimSpace(string(j.query[1:]))
+	sections := [...]string{onMessage: "Message", onConv: "Conversation", onSidebar: "Everywhere", anywhere: "Everywhere"}
+	conv := &menu{conv: j.conv}
+	for _, s := range []scope{onMessage, onConv, onSidebar, anywhere} {
+		mn := &j.mn
+		if s == onConv {
+			mn = conv
+		}
+		for i := range allActions {
+			a := &allActions[i]
+			if a.on != s {
+				continue
+			}
+			it := jumpItem{act: a, label: a.label, section: sections[s], off: (s == onMessage && !j.msgOK) || (s == onConv && j.conv == "")}
+			if a.when != nil {
+				if it.label = a.when(m, v, mn); it.label == "" {
+					continue
+				}
+			}
+			if q != "" {
+				score, lit, ok := match(q, it.label)
+				if !ok {
+					continue
+				}
+				it.lit, it.score = lit, score
+				if it.off {
+					it.score -= 1000 // what can't be done goes last
+				}
+			}
+			j.items = append(j.items, it)
+		}
+	}
+	if q != "" {
+		slices.SortStableFunc(j.items, func(a, b jumpItem) int { return b.score - a.score })
+	}
 }
 
 // buildJump lists what the query finds.
 func (m *Model) buildJump(v store.View) {
 	j := &m.bar
 	j.items, j.at = j.items[:0], 0
+	if len(j.query) > 0 && j.query[0] == '>' {
+		m.buildActions(v)
+		return
+	}
 	recent := m.recent()
 	if len(j.query) == 0 {
 		seen := map[string]bool{m.open: true}
@@ -72,9 +130,16 @@ func (m *Model) buildJump(v store.View) {
 		if c == nil || id == m.open {
 			continue
 		}
-		score, lit, ok := match(q, jumpTitle(v, c))
+		title := jumpTitle(v, c)
+		score, lit, ok := match(q, title)
 		if !ok {
 			continue
+		}
+		switch t := strings.ToLower(title); { // the name typed out beats any fuzzy hit
+		case t == strings.ToLower(q):
+			score += 1000
+		case strings.HasPrefix(t, strings.ToLower(q)):
+			score += 500
 		}
 		switch {
 		case needsYou(c):
@@ -127,6 +192,9 @@ func (m *Model) jumpKey(k tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		j.on = false
 		if j.at < len(j.items) {
+			if a := j.items[j.at].act; a != nil {
+				return m.runAction(*a)
+			}
 			if to := j.items[j.at].ws; to != nil {
 				return func() tea.Msg { return switchMsg{to} }
 			}
@@ -184,8 +252,17 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 		row := canvas.Row{canvas.T(l+"─ ", edge), canvas.T(label, ink.Sub.With(canvas.Bold))}
 		return append(row, canvas.T(" "+strings.Repeat("─", max(0, bw-row.Width()-2))+r, edge))
 	}
-	box := []canvas.Row{edgeRow("╭", "⌕ Jump", "╮")}
-	box = append(box, line(canvas.Row{canvas.T("❯ ", fill.Fg(m.pal.Orange.FG).With(canvas.Bold)), canvas.T(string(m.bar.query), fill.Fg(ink.Bright.FG)), canvas.T("▏", fill.Fg(m.pal.Orange.FG))}))
+	acting := len(m.bar.query) > 0 && m.bar.query[0] == '>'
+	title, foot := "⌕ Jump", "↑↓ · enter go · > actions · # browse · ctrl+f messages · esc close"
+	if acting {
+		title, foot = "▸ Actions", "↑↓ choose · enter do · esc close"
+	}
+	box := []canvas.Row{edgeRow("╭", title, "╮")}
+	input := canvas.Row{canvas.T("❯ ", fill.Fg(m.pal.Orange.FG).With(canvas.Bold)), canvas.T(string(m.bar.query), fill.Fg(ink.Bright.FG)), canvas.T("▏", fill.Fg(m.pal.Orange.FG))}
+	if len(m.bar.query) == 0 {
+		input = append(input, canvas.T("type > for actions, # to browse channels", fill.Fg(ink.Dim.FG)))
+	}
+	box = append(box, line(input))
 	box = append(box, line(canvas.Row{canvas.T(strings.Repeat("─", inner), fill.Fg(ink.Faint.FG))}))
 
 	// The rows that fit, scrolled to keep the selection in view, with a
@@ -194,7 +271,7 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 	at := -1
 	section := ""
 	for i, it := range m.bar.items {
-		if it.section != section && len(m.bar.query) == 0 {
+		if it.section != section && (len(m.bar.query) == 0 || string(m.bar.query) == ">") {
 			section = it.section
 			head := canvas.Row{canvas.T("▾ "+section+" ", fill.Fg(ink.Sub.FG).With(canvas.Bold))}
 			rows = append(rows, append(head, canvas.T(strings.Repeat("─", max(0, inner-head.Width())), fill.Fg(ink.Faint.FG))))
@@ -214,7 +291,7 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 	for _, r := range rows[from:min(len(rows), from+listH)] {
 		box = append(box, line(r))
 	}
-	box = append(box, edgeRow("╰", "↑↓ choose · enter go · # browse · ctrl+f messages · esc close", "╯"))
+	box = append(box, edgeRow("╰", foot, "╯"))
 
 	out := make([]canvas.Row, len(frame))
 	for i, r := range frame {
@@ -232,6 +309,13 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 func (m *Model) jumpRow(v store.View, it jumpItem, w int, sel bool, fill canvas.Style) canvas.Row {
 	if it.ws != nil {
 		return m.jumpWsRow(it, w, sel, fill)
+	}
+	if a := it.act; a != nil {
+		row := m.menuRow(menuItem{key: a.key, glyph: a.glyph, label: it.label, danger: a.danger}, it.lit, sel, w, fill)
+		if it.off {
+			row = faint(row, m.pal.Main.Faint.FG)
+		}
+		return row
 	}
 	ink := m.pal.Main
 	c := v.Conv(it.conv)

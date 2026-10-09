@@ -5,6 +5,7 @@
 package emoji
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,12 +14,20 @@ import (
 //go:generate go run ../../tools/emoji
 
 var (
-	once  sync.Once
-	chars map[string]string     // every name, to its character
-	tones map[string]*[5]string // a name, to its skin-tone-2 to 6 forms, where it has them
-	names []string              // every name, in iamcal's order (related ones together)
-	canon map[string]string     // an alias, to the name Slack files it under
+	once   sync.Once
+	chars  map[string]string     // every name, to its character
+	tones  map[string]*[5]string // a name, to its skin-tone-2 to 6 forms, where it has them
+	names  []string              // every name, in iamcal's order (related ones together)
+	canon  map[string]string     // an alias, to the name Slack files it under
+	groups []Group               // iamcal's categories, skin tone swatches left out
 )
+
+// Group is a category of emoji, in Unicode's order: its name and the
+// first name of each emoji in it.
+type Group struct {
+	Name  string
+	Names []string
+}
 
 // build reads the table on first use, so starting up doesn't pay for it.
 func build() {
@@ -26,12 +35,19 @@ func build() {
 	tones = make(map[string]*[5]string, 1000)
 	canon = make(map[string]string, 800)
 	for line := range strings.Lines(data) {
+		if g, ok := strings.CutPrefix(line, "#"); ok {
+			groups = append(groups, Group{Name: strings.TrimSuffix(g, "\n")})
+			continue
+		}
 		f := strings.Split(strings.TrimSuffix(line, "\n"), "\t")
 		var skins *[5]string
 		if len(f) == 7 {
 			skins = (*[5]string)(f[2:])
 		}
 		first, _, _ := strings.Cut(f[0], ",")
+		if g := &groups[len(groups)-1]; g.Name != "Component" {
+			g.Names = append(g.Names, first)
+		}
 		for n := range strings.SplitSeq(f[0], ",") {
 			chars[n] = f[1]
 			if n != first {
@@ -43,6 +59,7 @@ func build() {
 			names = append(names, n)
 		}
 	}
+	groups = slices.DeleteFunc(groups, func(g Group) bool { return len(g.Names) == 0 })
 }
 
 // Lookup is the character for a shortcode, given without its colons.
@@ -79,4 +96,12 @@ func Canon(name string) string {
 func Names() []string {
 	once.Do(build)
 	return names
+}
+
+// Groups is the emoji by category, in Unicode's order: Smileys & Emotion,
+// People & Body, Animals & Nature, Food & Drink, Travel & Places,
+// Activities, Objects, Symbols, Flags. Don't change it.
+func Groups() []Group {
+	once.Do(build)
+	return groups
 }

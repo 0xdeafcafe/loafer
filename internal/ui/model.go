@@ -390,12 +390,18 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inThread(func() { m.insert(msg.Content); m.refreshPop() })
 		}
 	case tea.MouseWheelMsg:
+		if m.emo.pick.on {
+			return m, m.pickMouse(msg)
+		}
 		m.wheel(msg)
 	case tea.MouseMotionMsg:
 		if !m.hoverAt(msg.X, msg.Y) {
 			m.gate.Keep() // still the same message: nothing to draw
 		}
 	case tea.MouseClickMsg:
+		if m.emo.pick.on {
+			return m, m.pickMouse(msg)
+		}
 		return m, m.click(msg)
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
@@ -646,7 +652,7 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
-	case ".", "u", "s", "P", "m":
+	case ".", "u", "s", "P", "m", "L":
 		return m.actKey(s)
 	case "p":
 		return m.profile()

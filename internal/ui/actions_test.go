@@ -63,7 +63,7 @@ func TestMenuKeys(t *testing.T) {
 			keys = append(keys, it.key)
 		}
 	})
-	if len(keys) != 12 {
+	if len(keys) != 14 {
 		t.Fatalf("keys %v", keys)
 	}
 	seen := map[string]bool{}

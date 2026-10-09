@@ -59,14 +59,14 @@ func TestReactPicker(t *testing.T) {
 		t.Fatalf("r should open the picker on the newest message: %+v", m.emo.pick)
 	}
 	typeText(m, "thumbsu")
-	if got := m.emo.pick.items; len(got) == 0 || got[0].name != "thumbsup" {
+	if got := m.emo.pick.shown().cells; len(got) == 0 || got[0] != "thumbsup" {
 		t.Fatalf("thumbsu found %+v", got)
 	}
 	text := strings.Join(plainFrame(m.render()), "\n")
 	if testing.Verbose() {
 		t.Log("\n" + text)
 	}
-	if !strings.Contains(text, "☺ React") || !strings.Contains(text, "👍 thumbsup") {
+	if !strings.Contains(text, "☺ React") || !strings.Contains(text, "👍 :thumbsup:") {
 		t.Fatalf("picker not drawn:\n%s", text)
 	}
 	press(m, emojiEnter)
@@ -86,8 +86,8 @@ func TestReactPicker(t *testing.T) {
 	if !slices.Equal(m.emo.pick.mine, []string{"+1"}) {
 		t.Fatalf("mine: %v", m.emo.pick.mine)
 	}
-	if m.emo.pick.items[0].name != "+1" { // what you use comes first
-		t.Fatalf("first: %+v", m.emo.pick.items[0])
+	if got := m.emo.pick.shown().cells[0]; got != "+1" { // what you use comes first
+		t.Fatalf("first: %q", got)
 	}
 	press(m, emojiEnter)
 	if got := reactionsOn(m, ts); len(got) != 0 {

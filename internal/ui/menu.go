@@ -44,41 +44,7 @@ func (m *Model) menuList(v store.View) []menuItem {
 		}
 		return out
 	}
-	msg := &mn.msg
-	var out []menuItem
-	add := func(key, glyph, label string) { out = append(out, menuItem{key: key, glyph: glyph, label: label}) }
-	add("r", "☺", "react")
-	if !mn.thread {
-		add("t", "↩", "reply in thread")
-	}
-	add("a", "◇", "ask Claude")
-	if v.IsSaved(mn.conv, msg.TS) {
-		add("s", "◆", "remove from later")
-	} else {
-		add("s", "◆", "save for later")
-	}
-	add("m", "◷", "remind me ▸")
-	if slices.Contains(msg.PinnedTo, mn.conv) {
-		add("P", "⚑", "unpin")
-	} else {
-		add("P", "⚑", "pin")
-	}
-	if !mn.thread {
-		add("u", "●", "mark unread from here")
-	}
-	add("l", "⧉", "copy link")
-	add("c", "⧉", "copy text")
-	if mn.link {
-		add("o", "↗", "open link")
-	}
-	if len(downloadable(msg.Files)) > 0 {
-		add("D", "▤", "download files")
-	}
-	if msg.User == v.Self() && msg.Subtype == "" {
-		add("e", "✎", "edit")
-		out = append(out, menuItem{key: "d", glyph: "✗", label: "delete", danger: true})
-	}
-	return out
+	return m.actionItems(v, mn, onMessage)
 }
 
 // menuKey is a key while the menu is open: ↑↓ and enter, or an item's own
@@ -154,7 +120,7 @@ func (m *Model) overlayMenu(v store.View, frame []canvas.Row) []canvas.Row {
 	listH := max(1, min(len(items), m.h-headerH-6))
 	from := max(0, mn.at-listH+1)
 	for i := from; i < min(len(items), from+listH); i++ {
-		box = append(box, line(m.menuRow(items[i], i == mn.at, inner, fill)))
+		box = append(box, line(m.menuRow(items[i], nil, i == mn.at, inner, fill)))
 	}
 	box = append(box, edgeRow("╰", foot, "╯"))
 
@@ -171,7 +137,7 @@ func (m *Model) overlayMenu(v store.View, frame []canvas.Row) []canvas.Row {
 	return out
 }
 
-func (m *Model) menuRow(it menuItem, sel bool, w int, fill canvas.Style) canvas.Row {
+func (m *Model) menuRow(it menuItem, lit []int, sel bool, w int, fill canvas.Style) canvas.Row {
 	ink := m.pal.Main
 	base, mark := fill, canvas.T("  ", fill)
 	if sel {
@@ -187,7 +153,19 @@ func (m *Model) menuRow(it menuItem, sel bool, w int, fill canvas.Style) canvas.
 	if it.glyph != "" {
 		left = append(left, canvas.T(it.glyph+" ", glyph))
 	}
-	left = append(left, canvas.T(it.label, text))
+	if len(lit) == 0 {
+		left = append(left, canvas.T(it.label, text))
+	}
+	for i, r := range []rune(it.label) {
+		if len(lit) == 0 {
+			break
+		}
+		st := text
+		if slices.Contains(lit, i) {
+			st = base.Fg(m.pal.Orange.FG).With(canvas.Bold)
+		}
+		left = append(left, canvas.T(string(r), st)) // a seg a rune; labels are short
+	}
 	right := canvas.Row{canvas.T(it.key+" ", base.Fg(ink.Dim.FG).With(canvas.Bold))}
 	if it.tail != "" {
 		right = canvas.Row{canvas.T(it.tail+"  ", base.Fg(ink.Dim.FG)), canvas.T(it.key+" ", base.Fg(ink.Text.FG).With(canvas.Bold))}
