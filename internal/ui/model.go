@@ -5,7 +5,6 @@ package ui
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -255,12 +254,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	began := time.Now()
-	defer func() {
-		if d := time.Since(began); d > 75*time.Millisecond {
-			slog.Warn("stall", "what", fmt.Sprintf("%T", msg), "ms", d.Milliseconds())
-		}
-	}()
+	defer m.stalled(time.Now(), msg)
 	if cmd, ok := m.onPics(msg); ok {
 		return m, cmd
 	}

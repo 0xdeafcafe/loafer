@@ -24,6 +24,7 @@ func (m *Model) View() tea.View {
 		canvas.Emit(&m.frame, m.railed(m.render()))
 		drawn = true
 		obs.Frame(time.Since(began))
+		m.stalled(began, nil)
 		return m.frame.String()
 	})
 	if !drawn {
