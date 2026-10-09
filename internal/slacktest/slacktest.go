@@ -373,9 +373,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 			return nil, "channel_not_found"
 		}
 		ts := f.Get("ts")
-		if ts > c.LastRead {
-			c.LastRead = ts
-		}
+		c.LastRead = ts // backwards too: that's mark unread
 		kind := "channel_marked"
 		switch {
 		case c.IsIM:
