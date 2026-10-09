@@ -144,7 +144,7 @@ func (m *Model) people(v store.View, q string, out []item) []item {
 			out = append(out, it)
 		}
 	}
-	return out
+	return m.groups(v, q, out)
 }
 
 // channels finds the channels you're in that q means.

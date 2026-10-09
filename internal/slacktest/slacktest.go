@@ -44,6 +44,7 @@ type Server struct {
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
+	folk     folk  // presence, user groups (people.go)
 	files    map[string]*file
 	out      bool // signed out: every call is invalid_auth and the socket won't open
 }
@@ -58,6 +59,7 @@ type conv struct {
 func New() *Server {
 	s := &Server{prefs: map[string]string{}, convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	s.seed(time.Now())
+	s.seedPeople()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
 	mux.HandleFunc("/upload/", s.upload)
@@ -338,6 +340,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 	if out, code, ok := s.manage(method, f); ok {
 		return out, code
 	}
+	if out, code, ok := s.serveFolk(method, f); ok {
+		return out, code
+	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }
 
@@ -486,6 +491,8 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 			s.mu.Lock()
 			write(c, fmt.Appendf(nil, `{"type":"pong","reply_to":%d}`, ping.ID))
 			s.mu.Unlock()
+		} else {
+			s.frame(c, b)
 		}
 	}
 }

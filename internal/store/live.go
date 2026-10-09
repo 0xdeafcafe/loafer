@@ -221,13 +221,19 @@ func (s *Store) Apply(ev slack.Event) {
 	case "channel_section_upserted", "channel_section_deleted", "channel_sections_channels_upserted", "channel_sections_channels_removed":
 		s.applySection(ev)
 
-	case "user_change":
+	case "user_change", "user_status_changed":
 		var e struct {
 			User slack.User `json:"user"`
 		}
-		if jsonx.Unmarshal(ev.Raw, &e) == nil && e.User.ID != "" {
-			s.ApplyPeople([]slack.User{e.User})
+		if jsonx.Unmarshal(ev.Raw, &e) == nil {
+			s.ApplyUser(e.User)
 		}
+
+	case "presence_change", "manual_presence_change":
+		s.applyPresence(ev)
+
+	case "subteam_created", "subteam_updated":
+		s.applySubteam(ev)
 
 	case "activity", "activity_views_updated", "activity_clear_all_completed",
 		"saved_added", "saved_updated", "saved_deleted", "saved_clear", "saved_due":

@@ -58,6 +58,13 @@ func (s *Store) Boot(ctx context.Context, c *slack.Client) error {
 		}
 		may("sections", err)
 	})
+	wg.Go(func() {
+		gs, err := c.UserGroups(ctx)
+		if err == nil {
+			s.ApplyGroups(gs)
+		}
+		may("usergroups", err)
+	})
 	wg.Wait()
 	if len(errs) == 0 {
 		s.booted.Store(true)

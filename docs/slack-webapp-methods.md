@@ -271,7 +271,7 @@ The web client's, with guessed arguments:
 - `dnd`: `{dnd_enabled, next_dnd_start_ts, next_dnd_end_ts, snooze_enabled, snooze_endtime}`, in seconds. In dnd when now is from start to end, or before the snooze ends.
 - `pref_change`: `{name, value}`, the value being what boot has for that name.
 - `dnd_updated`: `{user, dnd_status: {...as dnd}}`. A guess. `dnd_updated_user` (other people's) is ignored.
-- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence (`presence_sub`, `presence_change`) isn't used yet.
+- `user_typing`: `{channel, user}`, and `thread_ts` for typing in a thread. Sent for every conversation you're in, so the store keeps them and only wakes the UI for the open one. Presence is below.
 
 ## Reactions and emoji (loafer's assumptions)
 
@@ -302,3 +302,13 @@ Saving uses `Client.Download`, `Fetch`'s GET (cookie to Slack's hosts only) stre
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,
 flannel method enum, `conversations.history` extras. Best next source: DevTools on the running Electron app (network tab shows `/api/<method>` form bodies,
 redact `token`), or the non-minified `gantry-v2` source maps if cached.
+
+## People: presence, profiles, user groups (UNCERTAIN, from memory of the web client and the public API)
+
+- `presence_sub`: `{"type":"presence_sub","ids":[...]}` sent over the websocket, 100 ms after the last id added (this one is recovered from the bundle, above). It belongs to the socket, so loafer sends everyone again after a reconnect. It never unsubscribes. Whether a large id list wants chunking is unknown.
+- `presence_change`: `{user, presence}` or, with `batch_presence_aware=1`, `{users: [...], presence}`. `presence` is `active` or `away`. The batch key name `users` is a guess. `manual_presence_change`: `{presence}`, which is you.
+- `user_change` carries the whole user. `user_status_changed` is assumed to carry `user` with at least `id` and `profile.status_*`; loafer takes a user without a name as a status change only. Status expiry is `profile.status_expiration`, unix seconds, 0 for none.
+- `users.info` with `user`, answering `{user}`; `users.list` fields `profile.title`, `email`, `pronouns` (pronouns may be absent or sit in a custom field), `tz`. Email is present only where the workspace shows it.
+- `usergroups.list` with `include_count=true`, answering `{usergroups: [{id, handle, name, user_count, date_delete}]}`. A failure is only logged. `subteam_created` and `subteam_updated` are assumed to carry the group whole as `subteam`; `date_delete` non-zero means gone. `subteam_members_changed` and `subteam_self_*` are ignored.
+- `conversations.open` with `users=<id>` and `return_im=true`, answering `{channel}`; `already_open` is a normal answer carrying the channel.
+- Sent as `<!subteam^S123|@handle>`, read as `<!subteam^S123>` with or without a label, and as a rich_text `usergroup` element.

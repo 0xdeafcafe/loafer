@@ -63,6 +63,7 @@ type Model struct {
 	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
 	mg        manage   // sidebar management (manage.go)
 	br        browse   // the channel browser (browse.go)
+	ppl       peopleUI // presence, and the profile card (people.go)
 	att       attachState
 
 	input    []rune
@@ -254,6 +255,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd, ok := m.onPics(msg); ok {
 		return m, cmd
 	}
+	if cmd, ok := m.onProfile(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -269,6 +273,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
+		m.watchPeople()
 		cmd := tea.Batch(m.waitStore(), m.fetchTabs(), m.readIfWatching()) // watching it come in is reading it
 		return m, tea.Batch(cmd, m.watchTyping(), m.markThread())
 	case bootedMsg:
@@ -395,6 +400,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.mg.ask != "" && s != "ctrl+c" && s != "f12" {
 		return m.askKey(s)
+	}
+	if m.ppl.card.on && s != "ctrl+c" && s != "f12" {
+		return m.cardKey(k)
 	}
 	if cmd, ok := m.attachKey(k, s); ok {
 		return cmd
@@ -590,6 +598,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
+	case "p":
+		return m.profile()
 	case "i":
 		m.setFocus(onCompose)
 	}
