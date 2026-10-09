@@ -35,6 +35,7 @@ type Store struct {
 	names    uint64 // goes up when people or emoji change, which drawn messages show
 	link     string // the websocket: connecting, live or offline; "" before it's tried
 	tabs     tabs   // the DMs, Activity and Later lists (tabs.go)
+	md       modals // apps' modals (modal.go)
 
 	booted atomic.Bool // a boot has got through
 	al     alertState  // notification rules and typing (alert.go)

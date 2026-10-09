@@ -213,6 +213,9 @@ func (s *Store) Apply(ev slack.Event) {
 	case "activity", "activity_views_updated", "activity_clear_all_completed",
 		"saved_added", "saved_updated", "saved_deleted", "saved_clear", "saved_due":
 		s.applyTabs(ev)
+
+	case "view_opened", "view_pushed", "view_updated", "view_closed":
+		s.applyView(ev)
 	}
 }
 

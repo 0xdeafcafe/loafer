@@ -60,6 +60,7 @@ type Model struct {
 	find      finder   // ctrl+f
 	th        threadPane
 	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
+	kit       blockKit // Block Kit's buttons and modals (press.go, modal.go)
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -257,6 +258,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.drawn.Clear()
 		m.claude.redraw()
 	case storeMsg:
+		m.syncModal()
 		m.st.Read(func(v store.View) {
 			if l := v.Link(); l != "" {
 				m.live = l
@@ -306,6 +308,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
 		}
+	case pressedMsg, submittedMsg:
+		return m, m.pressed(msg)
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
@@ -377,6 +381,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
+	}
+	if (m.kit.pick.on || m.kit.md.on) && s != "ctrl+c" && s != "f12" {
+		return m.blockKey(k)
 	}
 	if m.focus == onCompose && m.pop.on && m.popKey(s) {
 		return nil
@@ -502,6 +509,9 @@ func (m *Model) sideKey(s string) tea.Cmd {
 
 func (m *Model) msgsKey(s string) tea.Cmd {
 	page := max(1, m.h/6) // ponytail: messages a page, near enough
+	if cmd, ok := m.pressKey(s); ok {
+		return cmd
+	}
 	switch s {
 	case "up", "k":
 		return m.pick(by(-1))

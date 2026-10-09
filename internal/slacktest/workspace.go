@@ -171,7 +171,15 @@ func (s *Server) seed(now time.Time) {
 	fill(JoDM, 90*time.Minute, 0, say(Self, "pushed the fix"), say(Jo, "ta"))
 	deployed := say(DeployBot, "your deploy to *staging* finished in 2m 14s")
 	deployed.BotID = "B0DEPLOY"
-	fill(DeployDM, 19*time.Minute, 0, deployed)
+	ask := say(DeployBot, "loafer@4f2a9c1 is waiting to go to production")
+	ask.BotID, ask.AppID = "B0DEPLOY", "A0DEPLOY"
+	ask.Blocks = []byte(`[{"type":"section","block_id":"ask","text":{"type":"mrkdwn","text":"*loafer@4f2a9c1* is waiting to go to production"}},
+	 {"type":"actions","block_id":"go","elements":[
+	  {"type":"button","action_id":"review","style":"primary","text":{"type":"plain_text","text":"Review"},"value":"4f2a9c1"},
+	  {"type":"button","action_id":"hold","text":{"type":"plain_text","text":"Not today"},"value":"hold"},
+	  {"type":"overflow","action_id":"more","options":[{"text":{"type":"plain_text","text":"see the diff"},"value":"diff"},
+	   {"text":{"type":"plain_text","text":"page whoever's on call"},"value":"page"}]}]}]`)
+	fill(DeployDM, 19*time.Minute, 0, deployed, ask)
 
 	s.last = now.UnixMicro()
 }

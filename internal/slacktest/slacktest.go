@@ -328,6 +328,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		s.pushAny(map[string]any{"type": kind, "channel": ch, "ts": c.LastRead})
 		return map[string]any{}, ""
 	}
+	if method == "blocks.actions" || method == "views.submit" {
+		return s.blocks(method, f)
+	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }
 

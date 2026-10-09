@@ -186,6 +186,7 @@ type Message struct {
 	TS          string         `json:"ts"`
 	User        string         `json:"user"`
 	BotID       string         `json:"bot_id"`
+	AppID       string         `json:"app_id"`   // an app's, for pressing its buttons
 	Username    string         `json:"username"` // a bot's chosen name
 	Text        string         `json:"text"`
 	ThreadTS    string         `json:"thread_ts"`
