@@ -64,6 +64,7 @@ type Model struct {
 	mg        manage   // sidebar management (manage.go)
 	br        browse   // the channel browser (browse.go)
 	ppl       peopleUI // presence, and the profile card (people.go)
+	kit       blockKit // Block Kit's buttons and modals (press.go, modal.go)
 	att       attachState
 
 	input    []rune
@@ -268,6 +269,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.drawn.Clear()
 		m.claude.redraw()
 	case storeMsg:
+		m.syncModal()
 		m.st.Read(func(v store.View) {
 			if l := v.Link(); l != "" {
 				m.live = l
@@ -317,6 +319,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("✗ couldn't react: "+msg.err.Error(), true)
 		}
+	case pressedMsg, submittedMsg:
+		return m, m.pressed(msg)
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
@@ -394,6 +398,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
+	}
+	if (m.kit.pick.on || m.kit.md.on) && s != "ctrl+c" && s != "f12" {
+		return m.blockKey(k) // a modal is on top of everything, so it takes keys first
 	}
 	if m.mg.pk.kind != pickNone && s != "ctrl+c" && s != "f12" {
 		return m.pickKey(k)
@@ -543,6 +550,9 @@ func (m *Model) sideKey(s string) tea.Cmd {
 
 func (m *Model) msgsKey(s string) tea.Cmd {
 	page := max(1, m.h/6) // ponytail: messages a page, near enough
+	if cmd, ok := m.pressKey(s); ok {
+		return cmd
+	}
 	switch s {
 	case "up", "k":
 		return m.pick(by(-1))

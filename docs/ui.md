@@ -212,8 +212,9 @@ Rendering:
   - danger: red fill
   - default: chip fill with cText
   - link buttons: a trailing `↗`
-- **Choosing a button**: in a selected message, `tab` / `shift+tab` move between its buttons, and the chosen one gets an orange underline. `enter` presses it, and `✻` shows until the response arrives.
-- **Selects and overflow menus** are a chip with `▾` that opens rush's picker sheet.
+- **Choosing a button**: in a selected message, `b` / `shift+b` step through its buttons and menus (`tab` stays the pane key), and the chosen one goes orange. `enter` presses it, `esc` lets it go, and `✻ label` sits in the hint line until Slack answers.
+- **Selects and overflow menus** are a chip with `▾`; `enter` opens a small chooser (`↑↓`, `enter`, `esc`). A **datepicker** takes the date typed, as `2026-10-09`. Other selects (users, channels, external) and checkboxes in a message say they can't be worked yet.
+- Whatever the app does next comes down the websocket: an edit to the message, or a modal (below).
 - **Context** blocks are dim.
 - **Dividers** are a faint rule inside the `▌`.
 - **Images** (image blocks, attachments' images, image files) are kitty placeholders up to 8 rows tall, with their `▣ name 1200×800` line (or the file's line) under them as a caption; with graphics off it's just that line. One on its way holds the rows it'll take when its size is known, so nothing jumps when it lands. A context block's images are a picture a row high beside its text. Behind an overlay, pictures go blank.
@@ -222,7 +223,7 @@ Rendering:
 - **Legacy attachments**: the pretext above the bar, then inside it the author, the title (a link), the text, fields (short ones two to a row), an image, any blocks, and the footer with its time.
 - **Files** are a line each: `▣` image, `▶` video, `♪` audio, `▤` the rest, then the name (a link to it in Slack), its type and size, dim. A deleted file is a faint `▤ this file was deleted`.
 
-For now all of this is read-only: buttons and menus draw, but `tab` and `enter` don't press them yet.
+Not yet: buttons inside attachments and inside modals, and the `✻` spinning.
 
 Reactions: chips with the emoji and count. Yours sit on a warm chip with an orange count, others dim. `r` on the message adds one, `1`-`9` toggles one that's there. Custom emoji are 2×1-cell images, or `:name:` in dim.
 
@@ -263,9 +264,12 @@ Mentions inside text:
 - Callouts get a full-width fill and a `┃` rail:
   - danger: `errBG` with a red `!`
   - warning: `askBG` with a yellow `!`
-- Inputs are rush input boxes inside the sheet.
-- Keys: `tab` moves focus, and `ctrl+enter` submits.
-- Leaving with edits opens rush's yellow-edged confirm: `Leave this form? You'll lose what you've entered.  y leave  n keep editing`.
+- It opens when Slack pushes `view_opened` for a press made here (by its `client_token`), stacks on `view_pushed`, changes on `view_updated` and goes on `view_closed`.
+- Inputs: plain text and datepickers are a filled row you type into (at the end only, for now), a static select is a chip that opens the chooser, and checkboxes and radio buttons are a `☐ ☑` or `○ ◉` line each. Optional ones say so. Any other block draws as it would in a message.
+- Keys: `tab` `shift+tab` move between the inputs, then the submit and close buttons, the focused one marked with the orange `▍`. `↑↓` move within checkboxes and radio buttons, `space` or `enter` ticks one, `enter` on a button presses it, and `ctrl+enter` (or `ctrl+s`, for terminals that don't send it) submits.
+- Submitting checks the required inputs and the date first, then sends `views.submit`; what the app says is wrong shows in red under each input, and the modal closes once it's taken.
+- Leaving with edits turns the edge yellow and asks: `leave this form? you'll lose what you've entered`, `y` leave, `n` keep editing.
+- Not yet: the `ctrl+o ↗` link, callouts' rails, and rush input boxes proper.
 
 ### Message actions menu (`.`)
 
@@ -494,6 +498,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
 | `a` | ask Claude about it: the Claude tab, with it and five messages either side attached |
+| `b` `shift+b` | step through its buttons and menus; `enter` presses the chosen one, `esc` lets it go (Block Kit, above) |
 | `i` | write |
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.

@@ -343,6 +343,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 	if out, code, ok := s.serveFolk(method, f); ok {
 		return out, code
 	}
+	if method == "blocks.actions" || method == "views.submit" {
+		return s.blocks(method, f)
+	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }
 

@@ -166,6 +166,20 @@ So: the click sends `blocks.actions` with a `client_token`; the app calls `views
 carrying the same `client_token`, `view`, `view_id`, `view_type` (`modal`, `home`, ...), `previous_view_id` (for push/stack), `timeout_range`.
 `view_updated {view_id, app_id, view}`. Edit-hash container key is `${viewId}_${viewHash}`. Home tab: `view_type==="home"` with `channel_id`.
 
+What loafer sends and reads (`internal/slack/blocks.go`, `internal/store/modal.go`), none of it checked against a DevTools capture:
+- `blocks.actions` with `service_id` (the message's `bot_id`), `app_id` (the message's `app_id`, when it has one), `service_team_id`,
+  `client_token` (`web-<ms>-<n>`), `container` `{type:"message",channel_id,message_ts}` and `actions` a one-item array. That item is a GUESS from
+  the public `block_actions` payload: `{type, action_id, block_id, text, value, action_ts}`, plus `selected_option {text,value}` for a static
+  select or overflow and `selected_date` for a datepicker. No `state`, no `function_execution_id`. Thread messages send the same container.
+- `view_opened` is taken only when its `client_token` is one loafer sent lately (the last 8), or its `previous_view_id` is a view it holds;
+  `view_type` (or `view.type`) must be `modal`. `view` is read as an object, or as a string of JSON if it comes that way (UNCERTAIN).
+  `view_pushed` (GUESSED, by analogy) stacks like it, `view_updated` replaces by `view_id`, `view_closed` (GUESSED) drops that view and those on it.
+- `views.submit` (args NOT FOUND, GUESSED): `view_id`, `view_hash` (the view's `hash`), `client_token`, and `state` as `{"values":{block_id:
+  {action_id:{type, value | selected_option | selected_options | selected_date}}}}`, empty ones as `null`. Read back, also GUESSED: `response_action`
+  and `errors` (block_id to message), as an app answers `view_submission`. Errors show under their inputs; `update` and `push` wait for the socket;
+  anything else closes the modal (`clear` only closes the top one).
+- `views.close` (args NOT FOUND, GUESSED): `view_id`, `client_token`. The modal goes at once; a failure is only flashed.
+
 ## 7. Search
 
 FOUND methods: `search.modules.ai/channels/external/files/topResults/workObjects`, `search.inline`, `search.team`, `search.enterprise`,
