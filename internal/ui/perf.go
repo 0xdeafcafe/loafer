@@ -30,7 +30,8 @@ type sideKey struct {
 	id, name              string
 	names                 uint64
 	kind                  store.Kind
-	unread                bool
+	presence              string // a DM's user's (Presence); "" for the rest
+	muted, unread         bool
 	mentions              int
 	selected, open, hover bool
 	w                     int
@@ -42,22 +43,52 @@ func (m *Model) refreshSide(v store.View) {
 		return
 	}
 	m.sideSeen = m.st.Version()
-	if l := v.Layout(); l != m.sc.layout || len(m.side) == 0 {
+	if l := v.Layout(); l != m.sc.layout || len(m.side) == 0 || m.foldStale(v) {
 		m.buildSide(v)
 		m.sc.layout = l
 	}
 	m.sc.mentions, m.sc.unread, m.sc.needs = 0, 0, 0
 	for _, it := range m.side {
-		if c := v.Conv(it.conv); c != nil {
+		c := v.Conv(it.conv)
+		if c == nil {
+			continue
+		}
+		if !c.Muted {
 			m.sc.mentions += c.Mentions
 			if c.Unread {
 				m.sc.unread++
 			}
-			if needsYou(c) {
-				m.sc.needs++
-			}
+		}
+		if needsYou(c) {
+			m.sc.needs++
 		}
 	}
+}
+
+// foldStale says whether what collapsed sections show still holds: they
+// surface the open and the unread (manage.go), which Layout doesn't
+// track. The sidebar keeps the sections' order, so the built list is
+// walked beside them.
+func (m *Model) foldStale(v store.View) bool {
+	at := 0
+	for _, sec := range v.Sidebar() {
+		if !sec.Collapsed {
+			at += 1 + len(sec.Convs) // the heading and all of them
+			continue
+		}
+		at++ // the heading
+		for _, id := range sec.Convs {
+			c := v.Conv(id)
+			if c == nil || (id != m.open && !unreadConv(c)) {
+				continue
+			}
+			if at >= len(m.side) || m.side[at].conv != id {
+				return true
+			}
+			at++
+		}
+	}
+	return false
 }
 
 // keptSideRow is sideRow, drawn once for as long as what it shows holds.
@@ -65,7 +96,11 @@ func (m *Model) keptSideRow(v store.View, c *store.Conv, w int, selected, open b
 	if m.sc.pal != m.pal || len(m.sc.rows) > 4*len(m.side)+64 {
 		m.sc.pal, m.sc.rows = m.pal, map[sideKey]canvas.Row{}
 	}
-	k := sideKey{c.ID, c.Name, v.Names(), c.Kind, c.Unread, c.Mentions, selected, open, selected && m.focus == onSide, w}
+	presence := ""
+	if c.Kind == store.IM {
+		presence = v.Presence(c.User)
+	}
+	k := sideKey{c.ID, c.Name, v.Names(), c.Kind, presence, c.Muted, c.Unread, c.Mentions, selected, open, selected && m.focus == onSide, w}
 	r, ok := m.sc.rows[k]
 	if !ok {
 		r = m.sideRow(v, c, w, selected, open)

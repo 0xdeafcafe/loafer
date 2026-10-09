@@ -54,13 +54,14 @@ func (s *Store) Drop(id string) (c Conv, ok bool) {
 		if v := s.convs[id]; v != nil {
 			c, ok = *v, true
 			delete(s.convs, id)
+			s.side++
 		}
 	})
 	return c, ok
 }
 
 // Restore puts back what Drop gave.
-func (s *Store) Restore(c Conv) { s.update(func() { s.convs[c.ID] = &c }) }
+func (s *Store) Restore(c Conv) { s.update(func() { s.convs[c.ID] = &c; s.side++ }) }
 
 // Mute mutes or unmutes id, and gives the value for the muted_channels pref.
 func (s *Store) Mute(id string, on bool) (value string) {
@@ -77,6 +78,7 @@ func (s *Store) Collapse(section string, on bool) (ok bool) {
 		for i := range s.sections {
 			if s.sections[i].ID == section {
 				s.sections[i].Collapsed, ok = on, true
+				s.side++
 			}
 		}
 	})
@@ -87,7 +89,11 @@ func (s *Store) Collapse(section string, on bool) (ok bool) {
 // none, which is where it goes by its kind). It gives the section it left,
 // and false if to isn't one held.
 func (s *Store) Move(conv, to string) (from string, ok bool) {
-	s.update(func() { from, ok = s.place(conv, to) })
+	s.update(func() {
+		if from, ok = s.place(conv, to); ok {
+			s.side++
+		}
+	})
 	return from, ok
 }
 
@@ -181,5 +187,6 @@ func (s *Store) applySection(ev slack.Event) {
 				s.sections[i].Convs = slices.DeleteFunc(slices.Clone(s.sections[i].Convs), func(id string) bool { return slices.Contains(e.Convs, id) })
 			}
 		}
+		s.side++ // any of these may reshape the sidebar
 	})
 }
