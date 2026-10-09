@@ -464,6 +464,12 @@ The connection state lives in header row 1:
 - `◌ reconnecting 3s` in yellow
 - signed out, loafer closes and asks you to sign in again, then reopens
 
+**Typing.** `drew is typing…` (or `drew and sam are typing…`, then `several people are typing…`) sits in dim italics on the row above the composer for 5 s after the last `user_typing`, for the open conversation only. Typing in threads isn't shown. One tick is armed while someone is typing, none when nobody is.
+
+**Notifications.** A new message notifies you when it's a DM or group DM, mentions you (or @here, @channel, unless you've silenced those there), has one of your highlight words, or replies in a thread you're in. It doesn't when it's yours, the conversation is muted or set to nothing, do not disturb or a snooze is on, or you have that conversation open in a focused terminal. Slack's own settings decide, so changing one in Slack applies at once.
+
+It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
+
 ## Sizes
 
 - **Under 100 columns**: the sidebar collapses to icons and counts (`# 2`, `⊡`), and Enter opens a full-width list.

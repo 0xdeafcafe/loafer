@@ -63,6 +63,8 @@ type Model struct {
 	editing  string           // the message the composer is changing
 	deleting string           // the message d was pressed on once
 
+	al alerts // notifications and the typing line (alerts.go)
+
 	live        string // connecting, live, offline, signed out
 	flash       string
 	flashErr    bool
@@ -108,7 +110,7 @@ type (
 )
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.boot())
+	return tea.Batch(tea.RequestBackgroundColor, m.waitStore(), m.waitNotes(), m.boot())
 }
 
 func (m *Model) waitStore() tea.Cmd {
@@ -142,6 +144,7 @@ func (m *Model) openConv(id string) tea.Cmd {
 	}
 	m.restore(id)
 	m.open, m.scroll, m.sel, m.deleting = id, 0, "", ""
+	m.watch()
 	if i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id }); i >= 0 {
 		m.sideAt = i
 	}
@@ -245,7 +248,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
 		}
-		return m, cmd
+		return m, tea.Batch(cmd, m.watchTyping())
 	case bootedMsg:
 		switch {
 		case msg.err == nil:
@@ -284,6 +287,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.say("couldn't fetch older messages: "+msg.err.Error(), true)
 		}
+	case tea.FocusMsg, tea.BlurMsg, noteMsg, flushMsg, typingMsg:
+		return m, m.alert(msg)
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""
