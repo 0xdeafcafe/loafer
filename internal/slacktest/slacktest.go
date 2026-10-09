@@ -44,6 +44,8 @@ type Server struct {
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
 	folk     folk  // presence, user groups (people.go)
+	files    map[string]*file
+	out      bool // signed out: every call is invalid_auth and the socket won't open
 }
 
 type conv struct {
@@ -54,11 +56,13 @@ type conv struct {
 
 // New starts a server holding the workspace in workspace.go.
 func New() *Server {
-	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}}
+	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	s.seed(time.Now())
 	s.seedPeople()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
+	mux.HandleFunc("/upload/", s.upload)
+	mux.HandleFunc("/files/", s.download)
 	mux.HandleFunc("/", s.socket)
 	s.Server = httptest.NewServer(mux)
 	return s
@@ -138,6 +142,27 @@ func (s *Server) Delete(channel, ts string) bool {
 	return s.remove(channel, ts)
 }
 
+// Sockets is how many websockets are open.
+func (s *Server) Sockets() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.socks)
+}
+
+// SetSignedOut has Slack stop taking the sign-in (hanging up the sockets),
+// or take it again.
+func (s *Server) SetSignedOut(out bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.out = out
+	if out {
+		for c := range s.socks {
+			c.CloseNow()
+			delete(s.socks, c)
+		}
+	}
+}
+
 // Typing says user is writing in channel.
 func (s *Server) Typing(channel, user string) {
 	s.mu.Lock()
@@ -154,7 +179,10 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 	f.Del("token")
 	s.mu.Lock()
 	s.calls = append(s.calls, Call{method, f})
-	out, code := s.serve(method, f)
+	out, code := map[string]any(nil), "invalid_auth"
+	if !s.out {
+		out, code = s.serve(method, f)
+	}
 	s.mu.Unlock()
 	if code != "" {
 		out = map[string]any{"ok": false, "error": code}
@@ -284,6 +312,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		ts := m.TS
 		s.remove(ch, ts)
 		return map[string]any{"channel": ch, "ts": ts}, ""
+
+	case "files.getUploadURLExternal", "files.completeUploadExternal":
+		return s.uploads(method, f)
 
 	case "conversations.mark":
 		if c == nil {
@@ -422,6 +453,13 @@ func (s *Server) ts() string {
 // --- the websocket ---
 
 func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	out := s.out
+	s.mu.Unlock()
+	if out {
+		http.Error(w, "invalid_auth", http.StatusUnauthorized)
+		return
+	}
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"app.slack.com"}})
 	if err != nil {
 		return

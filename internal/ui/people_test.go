@@ -12,8 +12,6 @@ import (
 	"github.com/0xdeafcafe/photon/jsonx"
 )
 
-func frameText(m *Model) string { return strings.Join(plainFrame(m.render()), "\n") }
-
 // slackEvent is a websocket frame as the store takes it.
 func slackEvent(t *testing.T, raw string) slack.Event {
 	t.Helper()
