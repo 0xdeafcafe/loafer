@@ -84,6 +84,7 @@ func BenchmarkBigReadDuringSave(b *testing.B) {
 	go func() {
 		for ctx.Err() == nil {
 			s.Save(path)
+			time.Sleep(5 * time.Millisecond)
 		}
 	}()
 	go func() {
