@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "srgb:1.00000,0.97255,0.89020,1.00000",
-          "srgb:0.92941,0.82745,0.64706,1.00000"
+          "srgb:0.38039,0.12157,0.41176,1.00000",
+          "srgb:0.24706,0.05490,0.25098,1.00000"
         ]
       }
     },
@@ -12,8 +12,8 @@
       "appearance": "dark",
       "value": {
         "linear-gradient": [
-          "srgb:0.20392,0.14510,0.18039,1.00000",
-          "srgb:0.08235,0.06275,0.07843,1.00000"
+          "srgb:0.25882,0.09412,0.28235,1.00000",
+          "srgb:0.12549,0.03922,0.15294,1.00000"
         ]
       }
     },
@@ -24,39 +24,278 @@
   ],
   "groups": [
     {
-      "name": "Penny loafer",
+      "name": "Penny strap",
       "layers": [
         {
-          "name": "Aubergine leather, gold penny and four accent stitches",
-          "image-name": "loafer.png",
+          "name": "Penny",
+          "image-name": "penny.svg",
           "position": {
-            "scale": 0.9,
+            "scale": 1,
             "translation-in-points": [
               0,
-              -24
+              -35
             ]
           },
-          "glass": true
+          "glass": false
+        },
+        {
+          "name": "Slot",
+          "image-name": "slot.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": false,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.20784,0.20784,0.20784,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Strap",
+          "image-name": "strap.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.69020,0.69020,0.69020,1.00000"
+              }
+            }
+          ]
         }
       ],
       "lighting": "combined",
-      "specular": true,
+      "specular": false,
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.35
+        "opacity": 0.1
       },
       "translucency-specializations": [
         {
           "value": {
-            "enabled": false,
-            "value": 0.0
+            "enabled": true,
+            "value": 0.06
           }
         },
         {
           "appearance": "tinted",
           "value": {
             "enabled": true,
-            "value": 0.18
+            "value": 0.06
+          }
+        }
+      ]
+    },
+    {
+      "name": "Moc-toe apron",
+      "layers": [
+        {
+          "name": "Apron",
+          "image-name": "apron.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.85490,0.85490,0.85490,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "lighting": "combined",
+      "specular": false,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.06
+      },
+      "translucency-specializations": [
+        {
+          "value": {
+            "enabled": true,
+            "value": 0.04
+          }
+        },
+        {
+          "appearance": "tinted",
+          "value": {
+            "enabled": true,
+            "value": 0.06
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upper and opening",
+      "layers": [
+        {
+          "name": "Lining",
+          "image-name": "lining.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": false,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.33333,0.33333,0.33333,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upper",
+          "image-name": "upper.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": false,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.73725,0.73725,0.73725,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "lighting": "combined",
+      "specular": false,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.08
+      },
+      "translucency-specializations": [
+        {
+          "value": {
+            "enabled": false,
+            "value": 0
+          }
+        },
+        {
+          "appearance": "tinted",
+          "value": {
+            "enabled": true,
+            "value": 0.06
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sole and stacked heel",
+      "layers": [
+        {
+          "name": "Sole",
+          "image-name": "sole.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": false,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.33333,0.33333,0.33333,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Heel",
+          "image-name": "heel.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              -35
+            ]
+          },
+          "glass": false,
+          "fill-specializations": [
+            {
+              "value": "automatic"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.25098,0.25098,0.25098,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "lighting": "combined",
+      "specular": false,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.12
+      },
+      "translucency-specializations": [
+        {
+          "value": {
+            "enabled": false,
+            "value": 0
+          }
+        },
+        {
+          "appearance": "tinted",
+          "value": {
+            "enabled": true,
+            "value": 0.06
           }
         }
       ]

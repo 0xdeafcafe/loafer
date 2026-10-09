@@ -1,20 +1,46 @@
 # Loafer notifier icon
 
-`Loafer.icon` is the editable Icon Composer source for the macOS 26+ notifier (`~/.loafer/loafer.app`, `com.github.0xdeafcafe.loafer.notifier`). It follows sibling yap's composition and build recipe. The subject is a glossy aubergine penny loafer, side on with its toe to the right, a gold penny and four small Slack-coloured accent stitches. No text or Slack logo.
+An illustrated penny loafer with a low throat, tapered vamp, rounded toe spring, tonal moc-toe apron, solid slotted strap and separate stacked heel. Eight hand-drawn SVG layers form four depth groups. The notifier identity is `com.github.0xdeafcafe.loafer.notifier`.
 
-## Composition and appearances
+The selected direction is a warm tan shoe on a saturated native aubergine gradient, `#611F69` to `#3F0E40`. We also rendered the same larger silhouette in aubergine on a light `#F0E6DD` tile; the saturated direction had stronger presence and clearer shoe-to-background separation at 32 px. Both are in the session comparison sheet. The alternative source stays in scratch, not in the delivered document.
 
-- `Loafer.icon/icon.json`: native background and one coherent glass foreground, combined lighting, specular enabled, neutral shadow at 0.35.
-- `Loafer.icon/Assets/loafer.png`: 1024 × 1024 RGBA shoe extracted with image generation; no tile or exterior cast shadow. Scale 0.9 and translation `[0, -24]` optically center the wide shoe.
-- Default: cream/sand gradient `#FFF8E3` to `#EDD3A5`. Dark: plum/charcoal `#34252E` to `#151014`, retaining leather colour.
-- Clear and Tinted use the automatic mono specialization. Translucency is disabled for Default/Dark and 0.18 for mono; the system supplies the tint.
-- Use only specialization arrays, including unqualified defaults, as in yap. The system supplies the modern rounded mask, lighting and exterior spacing.
-- `icon-1024.png`: selected full generated artwork, tile included. `AppIcon.icns`: legacy fallback from this artwork, with 16/32/128/256/512 sizes at 1×/2×.
-- `Assets.car`: compiled native icon. `partial-info.plist`: compiler output, `CFBundleIconName=Loafer`.
+## Layers and effects
 
-## Rebuild
+The shoe spans approximately 87% of the 1024-square canvas width. Shared scale 1 and translation `[0, -35]` center its silhouette; the heel finishes below the sole, leaving a visible arch. No bulky outsole, outline strokes, textures or painted effects are used. Foreground SVGs contain only opaque flat filled paths (plus a geometric transform for the penny). Background gradients and all rendered lighting are native.
 
-Select full Xcode 26+ with `xcode-select` or `DEVELOPER_DIR`. From the repository root, with a writable session `TMPDIR`:
+Back to front; JSON stores groups front to back:
+
+| Group | SVG layers | Default/Dark translucency | Neutral shadow |
+| --- | --- | --- | --- |
+| Sole and stacked heel | `heel.svg`, `sole.svg` | Disabled | 0.12 |
+| Upper and opening | `upper.svg`, `lining.svg` | Disabled | 0.08 |
+| Moc-toe apron | `apron.svg` | 0.04 | 0.06 |
+| Penny strap | `strap.svg`, `slot.svg`, `penny.svg` | 0.06 | 0.10 |
+
+All groups use combined lighting. Foreground specular is deliberately disabled to avoid puffy outlined edges. Glass is enabled only on the apron and strap; the other six layers preserve crisp matte silhouettes. Depth comes from overlapping planes, restrained translucency and native shadows. The inset apron edge suggests the moc-toe seam through a change of tone, not a stroke.
+
+Main tones: upper `#D7BA94`, apron `#EAD2AE`, strap `#C5A47B`, lining `#987459`, sole `#735039`, heel `#5A3D31` with one filled stack division. The dark slot `#63422D` contains a small four-part rounded inset using Slack blue `#36C5F0`, green `#2EB67D`, yellow `#ECB22E`, and red `#E01E5A`. This is a compact colour detail, not a rainbow band or the Slack logo.
+
+Dark keeps the tan shoe on a deeper native gradient (`#421848` to `#200A27`). Clear/Tinted share an automatic background and explicit grey foreground fills: upper `#BCBCBC`, apron `#DADADA`, strap `#B0B0B0`, slot `#353535`, lining/sole `#555555`, heel `#404040`. Each group has 0.06 mono translucency. Geometry is identical in every appearance; the system chooses the tint.
+
+## What we took from the references
+
+- **Tower:** a strong outline, saturated tile and distinct overlapping parts carry the object. Installed Tower 16.0 has a background plus four foreground groups. We used that restraint and separation, without borrowing its artwork.
+- **Amphetamine:** its bundled pill-only `AmphIcon_v1` is recognisable through a small number of deliberate shapes. Installed 5.3.2 uses a pill-and-screen icon and has no native glass stack; the comparison shows that actual installed icon.
+- **Paw:** the [official fox construction graphic](https://cdn-content.paw.cloud/versions/releases/paw-3.2.1-release/paw-3.2.1-logo.png), linked from its [release history](https://paw.cloud/updates), shows the value of confident tapering curves. We took geometric economy, not its painted highlights.
+- **Apple:** installed Notes has two foreground groups; Podcasts and Home each have four, with vector foregrounds. We kept separate planes but reduced glass edging. At notification size, silhouette and broad light/dark contrast do the work; the small penny colours are a secondary detail.
+
+Reference catalogs were inspected with `assetutil --info`, and artwork through IconServices/ICNS extraction. Installed Apple apps were examined on macOS 27. See [Apple's App icons guidance](https://developer.apple.com/design/human-interface-guidelines/app-icons). No reference art is included in the source.
+
+## Files and rebuild
+
+- `Loafer.icon/`: JSON and eight SVGs; no raster foreground.
+- `Assets.car`, `partial-info.plist`: compiled catalog and compiler metadata.
+- `icon-1024.png`: native Default export, design generation 26.
+- `AppIcon.icns`: legacy fallback from that export, 16/32/128/256/512 at 1×/2×.
+- `rebuild.sh`, `render-previews.py`, `PROMPTS.md`: build, native previews and provenance.
+
+Select full Xcode using `xcode-select` or `DEVELOPER_DIR`. The workflow uses Xcode 27's `ictool` (`ICTOOL` can override it); previews require Pillow. With writable session `TMPDIR`, from the repository root:
 
 ```sh
 sh internal/notify/icon/rebuild.sh
@@ -22,14 +48,14 @@ python3 internal/notify/icon/render-previews.py
 assetutil --info internal/notify/icon/Assets.car
 ```
 
-The build uses `xcrun actool` with `--app-icon Loafer --platform macosx --target-device mac --minimum-deployment-target 26.0`, checks the partial plist, then creates the fallback with `sips` and `iconutil`. Intermediates stay in `$TMPDIR`.
+`rebuild.sh` runs `xcrun actool` with `--app-icon Loafer --platform macosx --target-device mac --minimum-deployment-target 26.0`, validates `CFBundleIconName=Loafer`, renders the master with `ictool`, and builds ICNS with `sips`/`iconutil`. Intermediates stay under `$TMPDIR`.
 
-When integrating, copy `Assets.car` and `AppIcon.icns` into the notifier's `Contents/Resources`; set `CFBundleIconName=Loafer` and `CFBundleIconFile=AppIcon`. Do not merge the compiler's `CFBundleIconFile=Loafer` over the separately named fallback. No notifier code or installed bundle was changed here.
+Integration remains `CFBundleIconName=Loafer`, `CFBundleIconFile=AppIcon`, with the catalog and fallback in `Contents/Resources`. Do not merge the compiler's `CFBundleIconFile=Loafer` over the fallback name. The installed notifier was not modified.
 
-## Preview and verification
+## Verification
 
-The preview script is adapted from yap, requires Pillow and Xcode 27's `ictool`, and writes only to a new directory in `$TMPDIR`. `ICTOOL` can override the renderer. It exports Default, Dark, ClearLight, ClearDark, TintedLight and TintedDark at 1024/128/32/16 px for design generations 26 and 27, plus a proof sheet. It uses native rendering, not simulated glass.
+`rebuild.sh` passed with Xcode 27.0 (27A5228h) on macOS 27.0. `assetutil` confirms three appearance stacks, each with five planes (background plus four groups), retaining all eight Vector assets. The master PNG matches the final 1024 Default export.
 
-Verified with Xcode 27.0 (27A5228h): compilation succeeded; the partial plist names Loafer; `assetutil` reports three Loafer IconImageStack records (Aqua, DarkAqua, Tintable), each with two layers. All 48 renders had the expected dimensions and were visually inspected, including actual-size small renders and enlarged pixel views. The collar dip, raised strap, right-facing toe and heel remain readable; accent stitches and fine grain disappear at 16 px. Tinted Dark is subdued and is the weakest small-size variant. The legacy full artwork still has stray generated pixels around its outer tile edge despite a cleanup pass; these are absent from the native system tile. This is a remaining fallback quality limitation.
+All 48 native renders were dimension-checked and visually inspected: Default, Dark, ClearLight, ClearDark, TintedLight, TintedDark at 1024/128/32/16 px, generations 26 and 27. The silhouette separates in Dark and mono. At 32 px the penny is a small accent; at 16 px its four colours and slot no longer resolve individually. The slim profile is intentional; it uses width rather than a tall, cartoon-like upper. Generation 26 is renderer emulation, not a separate macOS 26 notification test.
 
-macOS 26 was checked through `--design-generation 26` on the available host, not a separate macOS 26 notification runtime. No app launch, notification delivery, installation, signing or commit was performed. Prompts and selected passes are in `PROMPTS.md`.
+This pass's previews: `$TMPDIR/loafer-icon-previews-tytq1sbk/` (`glass-check.png`, `small-26.png`, `small-27.png`, `previews/`). The comparison is `$TMPDIR/loafer-refined/comparison-128-32.png`: selected rich and alternate light directions beside Tower and Amphetamine, all through IconServices at actual 128/32 px with matching spacing. Temporary valid preview bundles were used, without launching them. No installation, notification delivery or commit was performed.

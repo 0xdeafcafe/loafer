@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<g transform="translate(509 478) rotate(31)">
+ <path fill="#36C5F0" d="M-24 -15 H-2 V-1 H-31 V-7 Q-31 -15 -24 -15 Z"/>
+ <path fill="#2EB67D" d="M2 -15 H24 Q31 -15 31 -7 V-1 H2 Z"/>
+ <path fill="#ECB22E" d="M2 3 H31 V9 Q31 17 24 17 H2 Z"/>
+ <path fill="#E01E5A" d="M-31 3 H-2 V17 H-24 Q-31 17 -31 9 Z"/>
+</g>
+</svg>

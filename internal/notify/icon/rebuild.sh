@@ -9,6 +9,13 @@ xcrun actool Loafer.icon --compile "$icon_build" --app-icon Loafer \
 test -s "$icon_build/Assets.car"
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconName' "$icon_build/partial-info.plist")" = Loafer
 cp "$icon_build/Assets.car" "$icon_build/partial-info.plist" .
+# Export the legacy master from the same native document; never reuse old artwork.
+developer=${DEVELOPER_DIR:-$(xcode-select -p)}
+renderer=${ICTOOL:-"$developer/../Applications/Icon Composer.app/Contents/Executables/ictool"}
+"$renderer" Loafer.icon --export-image --output-file "$icon_build/icon-1024.png" \
+  --platform macOS --rendition Default --width 1024 --height 1024 \
+  --scale 1 --design-generation 26
+cp "$icon_build/icon-1024.png" icon-1024.png
 mkdir "$icon_build/AppIcon.iconset"
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" icon-1024.png --out "$icon_build/AppIcon.iconset/icon_${size}x${size}.png" >/dev/null
