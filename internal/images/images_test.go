@@ -162,6 +162,58 @@ func TestFailure(t *testing.T) {
 	}
 }
 
+// One that failed is tried once more when it's asked for after a while,
+// and then left be.
+func TestRetryOnce(t *testing.T) {
+	termimg.SetCell(10, 20)
+	was := retryAfter
+	retryAfter = 0
+	t.Cleanup(func() { retryAfter = was })
+	srv, hits := server(t, nil)
+	s := New(context.Background(), get, "")
+	busy := func() bool {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return len(s.pending) > 0
+	}
+	wait(t, s, srv.URL+"/missing", 2, 1)
+	s.Get(srv.URL+"/missing", 2, 1) // the retry
+	for busy() {
+		select {
+		case <-s.Landed():
+		case <-time.After(5 * time.Second):
+			t.Fatal("the retry never landed")
+		}
+	}
+	for range 3 {
+		s.Get(srv.URL+"/missing", 2, 1)
+	}
+	if n := hits.Load(); n != 2 || busy() {
+		t.Fatalf("fetched %d times, want 2", n)
+	}
+}
+
+// The disk cache is pruned to its cap, the oldest first.
+func TestPrune(t *testing.T) {
+	dir := t.TempDir()
+	at := time.Now().Add(-time.Hour)
+	for i, name := range []string{"old.png", "mid.png", "new.png"} {
+		p := dir + "/" + name
+		if err := os.WriteFile(p, make([]byte, 100), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		when := at.Add(time.Duration(i) * time.Minute)
+		if err := os.Chtimes(p, when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prune(dir, 200)
+	es, _ := os.ReadDir(dir)
+	if len(es) != 2 || es[0].Name() != "mid.png" || es[1].Name() != "new.png" {
+		t.Fatalf("left %v", es)
+	}
+}
+
 // A picture keeps its shape: a wide one fills the width, not the rows.
 func TestFit(t *testing.T) {
 	termimg.SetCell(10, 20)

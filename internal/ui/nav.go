@@ -78,11 +78,11 @@ func (m *Model) step(d int, ok func(*store.Conv) bool) string {
 }
 
 func anyConv(*store.Conv) bool      { return true }
-func unreadConv(c *store.Conv) bool { return c.Unread || c.Mentions > 0 }
+func unreadConv(c *store.Conv) bool { return !c.Muted && (c.Unread || c.Mentions > 0) }
 
-// needsYou is a mention, or anything new in a DM.
+// needsYou is a mention, or anything new in a DM, unless it's muted.
 func needsYou(c *store.Conv) bool {
-	return c.Mentions > 0 || (c.Unread && (c.Kind == store.IM || c.Kind == store.MPIM))
+	return !c.Muted && (c.Mentions > 0 || (c.Unread && (c.Kind == store.IM || c.Kind == store.MPIM)))
 }
 
 func (m *Model) jump(d int, ok func(*store.Conv) bool, none string) tea.Cmd {
@@ -313,6 +313,13 @@ func spanText(v store.View, s mrkdwn.Span) string {
 			return "#" + c.Name
 		}
 		return "#" + s.Target
+	case mrkdwn.Group:
+		if g, ok := v.Group(s.Target); ok {
+			return "@" + g.Handle
+		}
+		if s.Text == "" {
+			return "@" + s.Target
+		}
 	case mrkdwn.Emoji:
 		e, _ := emojiText(s.Text)
 		return e

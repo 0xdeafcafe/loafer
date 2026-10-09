@@ -39,10 +39,12 @@ type Server struct {
 	convs    map[string]*conv
 	order    []string // conversation ids, as boot lists them
 	sections []slack.Section
+	prefs    map[string]string // users.prefs.set, and what boot lists (manage.go)
 	emoji    map[string]string
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
+	folk     folk  // presence, user groups (people.go)
 	files    map[string]*file
 	out      bool // signed out: every call is invalid_auth and the socket won't open
 }
@@ -61,9 +63,10 @@ func New() *Server { return start(false) }
 func NewBig() *Server { return start(true) }
 
 func start(big bool) *Server {
-	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
+	s := &Server{prefs: map[string]string{}, convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	now := time.Now()
 	s.seed(now)
+	s.seedPeople()
 	if big {
 		s.seedBig(now)
 	}
@@ -232,7 +235,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 				chans = append(chans, c.wire())
 			}
 		}
-		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims}, ""
+		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims, "prefs": s.prefs}, ""
 
 	case "client.counts":
 		var chans, mpims, ims []slack.Snapshot
@@ -354,6 +357,15 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		}
 		s.pushAny(map[string]any{"type": kind, "channel": ch, "ts": c.LastRead})
 		return map[string]any{}, ""
+	}
+	if out, code, ok := s.manage(method, f); ok {
+		return out, code
+	}
+	if out, code, ok := s.serveFolk(method, f); ok {
+		return out, code
+	}
+	if method == "blocks.actions" || method == "views.submit" {
+		return s.blocks(method, f)
 	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }
@@ -503,6 +515,8 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 			s.mu.Lock()
 			write(c, fmt.Appendf(nil, `{"type":"pong","reply_to":%d}`, ping.ID))
 			s.mu.Unlock()
+		} else {
+			s.frame(c, b)
 		}
 	}
 }

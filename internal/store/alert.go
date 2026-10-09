@@ -61,7 +61,7 @@ func (s *Store) applyAlert(ev slack.Event) {
 			Value jsontext.Value `json:"value"`
 		}
 		if jsonx.Unmarshal(ev.Raw, &e) == nil {
-			s.update(func() { s.al.prefs.Set(e.Name, e.Value) })
+			s.update(func() { s.al.prefs.Set(e.Name, e.Value); s.syncMuted() })
 		}
 
 	case "dnd_updated":

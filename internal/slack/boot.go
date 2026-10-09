@@ -117,6 +117,10 @@ type User struct {
 		Image72     string `json:"image_72"`
 		StatusEmoji string `json:"status_emoji"`
 		StatusText  string `json:"status_text"`
+		StatusUntil int64  `json:"status_expiration"` // 0 for none
+		Title       string `json:"title"`
+		Email       string `json:"email"`    // only where the workspace shows it
+		Pronouns    string `json:"pronouns"` // UNCERTAIN: absent from some workspaces' profiles
 		BotID       string `json:"bot_id"`
 	} `json:"profile"`
 }
@@ -186,6 +190,7 @@ type Message struct {
 	TS          string         `json:"ts"`
 	User        string         `json:"user"`
 	BotID       string         `json:"bot_id"`
+	AppID       string         `json:"app_id"`   // an app's, for pressing its buttons
 	Username    string         `json:"username"` // a bot's chosen name
 	Text        string         `json:"text"`
 	ThreadTS    string         `json:"thread_ts"`

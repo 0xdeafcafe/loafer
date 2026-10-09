@@ -127,6 +127,12 @@ func tokenLabel(v store.View, body string) string {
 			return ref
 		}
 		return "#" + strings.TrimPrefix(name, "#")
+	case strings.HasPrefix(ref, "!subteam^") && label == "":
+		id := strings.TrimPrefix(ref, "!subteam^")
+		if g, ok := v.Group(id); ok {
+			return "@" + g.Handle
+		}
+		return "@" + id
 	case strings.HasPrefix(ref, "!") && label == "":
 		return "@" + strings.TrimPrefix(strings.SplitN(ref[1:], "^", 2)[0], "@")
 	}

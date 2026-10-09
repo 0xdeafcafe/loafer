@@ -22,8 +22,18 @@ func (s *Store) Read(f func(View)) {
 
 func (v View) Self() string             { return v.s.self }
 func (v View) Team() slack.Team         { return v.s.team }
-func (v View) Conv(id string) *Conv     { return v.s.convs[id] }
 func (v View) Window(id string) *Window { return v.s.windows[id] }
+
+// Conv is the conversation id, or the channel being previewed.
+func (v View) Conv(id string) *Conv {
+	if c := v.s.convs[id]; c != nil {
+		return c
+	}
+	if p := v.s.preview; p != nil && p.ID == id {
+		return p
+	}
+	return nil
+}
 
 // Link is the websocket's state: connecting, live or offline, or "" before
 // it's been tried.

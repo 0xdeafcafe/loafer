@@ -37,6 +37,7 @@ type Client struct {
 	base  string // https://<domain>.slack.com/api/
 	creds Creds
 	http  *http.Client
+	pres  presence // who the websocket is asked about (people.go)
 }
 
 var inflight = obs.Gauge("api.inflight")
