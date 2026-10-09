@@ -20,6 +20,7 @@ const (
 type Progress struct {
 	Done, Failed uint32 // bits by Step
 	People       int    // people held, growing page by page
+	Convs, Emoji int    // conversations and custom emoji held
 }
 
 // Has says whether step s is done, well or not.
@@ -30,7 +31,7 @@ func (p Progress) Bad(s Step) bool { return p.Failed&(1<<s) != 0 }
 
 // Progress is how far Boot has got.
 func (v View) Progress() Progress {
-	return Progress{Done: v.s.done, Failed: v.s.failed, People: len(v.s.people)}
+	return Progress{Done: v.s.done, Failed: v.s.failed, People: len(v.s.people), Convs: len(v.s.convs), Emoji: len(v.s.emoji)}
 }
 
 // stepped marks s done (failed, with err), and says so.
