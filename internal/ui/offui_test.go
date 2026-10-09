@@ -16,6 +16,7 @@ import (
 	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/slacktest"
 	"github.com/0xdeafcafe/loafer/internal/store"
+	"github.com/0xdeafcafe/photon/canvas"
 	"github.com/0xdeafcafe/photon/termimg"
 )
 
@@ -92,6 +93,60 @@ func TestPictureBurst(t *testing.T) {
 	f := slices.Sorted(slices.Values(r.frames))
 	t.Logf("%d landings heard in %s, %d frames (p50 %s, p99 %s, max %s), UI busy %s, %d KB raw",
 		landings, time.Since(began).Round(time.Millisecond), len(f), ms(pct(f, 50)), ms(pct(f, 99)), ms(f[len(f)-1]), ms(busy), raw>>10)
+}
+
+// A landing draws again only the rows that waited on a picture: once
+// every avatar on screen has landed, 500 more landings draw nothing again.
+func TestLandingKeepsRows(t *testing.T) {
+	open := make(chan struct{})
+	close(open)
+	srv := withPics(t, open)
+	m := fixture(t)
+	u := slack.User{ID: "U1", Name: "drew"}
+	u.Profile.Image72 = srv.URL + "/drew.png"
+	m.st.ApplyPeople([]slack.User{u})
+	m.render()
+	if len(m.pix.waiting) == 0 {
+		t.Fatal("drew's rows don't wait on his avatar")
+	}
+	landUntil(t, m, hasPicture)
+	kept := map[rowKey]*canvas.Row{}
+	m.drawn.Each(func(k rowKey, v []canvas.Row, _ int) { kept[k] = &v[0] })
+	for range 500 {
+		m.onPics(picsMsg{})
+		m.render()
+	}
+	m.drawn.Each(func(k rowKey, v []canvas.Row, _ int) {
+		if was, ok := kept[k]; ok && was != &v[0] {
+			t.Fatalf("%s drawn again with nothing to wait on", k.ts)
+		}
+	})
+	if len(m.pix.waiting) != 0 {
+		t.Fatalf("%d rows still waiting", len(m.pix.waiting))
+	}
+}
+
+// Landings are heard at most once a picsGap, and the first at once.
+func TestLandingsCoalesce(t *testing.T) {
+	open := make(chan struct{})
+	close(open)
+	srv := withPics(t, open)
+	m := fixture(t)
+	n := 0
+	took := func() time.Duration {
+		n++
+		picture(fmt.Sprintf("%s/%d.png", srv.URL, n), 2, 1)
+		began := time.Now()
+		m.waitPics()()
+		return time.Since(began)
+	}
+	if d := took(); d > picsGap/2 {
+		t.Fatalf("the first landing waited %s", d)
+	}
+	m.pix.at = time.Now()
+	if d := took(); d < picsGap*9/10 {
+		t.Fatalf("the next came %s after, not %s", d, picsGap)
+	}
 }
 
 // TestColdSteps boots the big workspace from nothing, pictures on, and
