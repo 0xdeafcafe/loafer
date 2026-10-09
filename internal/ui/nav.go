@@ -312,7 +312,7 @@ func spanText(v store.View, s mrkdwn.Span) string {
 		}
 		return "#" + s.Target
 	case mrkdwn.Emoji:
-		e, _ := emoji(s.Text)
+		e, _ := emojiText(s.Text)
 		return e
 	}
 	return s.Text
