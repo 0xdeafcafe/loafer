@@ -54,6 +54,7 @@ type Model struct {
 	fetching  bool     // older messages are on their way
 	back, fwd []string // conversations visited, for alt+← and alt+→
 	bar       jumper   // ctrl+k
+	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
 
 	input    []rune
 	cur      int
@@ -243,7 +244,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
-		cmd := m.waitStore()
+		cmd := tea.Batch(m.waitStore(), m.fetchTabs())
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
 		}
@@ -274,8 +275,10 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.say("couldn't open: "+msg.err.Error(), true)
 		}
 		if msg.conv == m.open {
-			return m, m.markRead()
+			return m, tea.Batch(m.markRead(), m.seek())
 		}
+	case tabMsg:
+		return m, m.tabDone(msg)
 	case sentMsg:
 		if msg.err != nil {
 			return m, m.say("✗ couldn't send: "+msg.err.Error(), true)
@@ -377,9 +380,17 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		return m.goBack()
 	case "alt+right":
 		return m.goForward()
+	case "alt+1", "alt+2", "alt+3", "alt+4", "alt+5":
+		return m.setTab(tabID(s[4] - '1'))
+	}
+	if m.tabs.on == tabClaude {
+		return nil // ponytail: the Claude pane's keys go here
 	}
 	switch m.focus {
 	case onSide:
+		if m.tabs.on != tabHome {
+			return m.tabKey(s)
+		}
 		return m.sideKey(s)
 	case onMsgs:
 		return m.msgsKey(s)

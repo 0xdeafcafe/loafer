@@ -80,6 +80,15 @@ with `{name,emoji,sort,density}`.
 Unread counts: `client.counts` returns `activity_v2` and the boot payload has `activity_inbox_badge_counts:{total_unread_count,activity_v2}`.
 RTM: `activity`, `activity_clear_all_completed`, `activity_views_updated`.
 
+What loafer sends and reads, all UNVERIFIED until a DevTools capture (`internal/slack/tabs.go`):
+- `activity.feed` with `limit=30`, `mode=chrono_reads_and_unreads`, `types` comma-joined (FormData joins an array that way).
+- Inside `item`: `message{ts,channel,thread_ts,author_user_id,user,text}`, `reaction{user,name}`, and for bundles
+  `bundle_info.payload.thread_entry{channel_id,thread_ts,latest_ts}` or `.payload.message`. When there's no text, the message is fetched
+  with `conversations.history` (`oldest=latest=ts`, `inclusive`) or `conversations.replies`.
+- `activity.markRead` with `key, feed_ts, type, channel_id, message_ts`; errors are only logged.
+- `activity_v2` in `client.counts`: read as a number, or an object's `unread_count`/`total_unread_count`/`badge_count`/`count`.
+- The RTM events' bodies aren't read: any of them fetches the feed again, once it's been opened.
+
 ## 3. Threads view
 
 FOUND methods: `subscriptions.thread.getView`, `.mark`, `.get`, `.add`, `.remove`, `.clearAll`, `.getTimestamps`.
@@ -112,6 +121,13 @@ Filters (list/bulk): `saved`, `todo`, `completed`, `archived`(inferred), `todo_o
 List call: `fetchAndSyncSavedList({filter, laterTodos:true, replaceFilter})`; limit/cursor keys NOT FOUND (max page likely 30).
 RTM: `saved_added` (`e.saved`, `e.client_id`), `saved_updated`, `saved_deleted`, `saved_clear`, `saved_due`.
 Counts: `client.counts` response has a `saved` object.
+
+What loafer sends and reads, all UNVERIFIED until a DevTools capture (`internal/slack/tabs.go`):
+- `saved.list` with `filter=saved`, `limit=50`, one page; the list is read from `saved_items`, else `items`. Anything archived, completed or
+  not `in_progress` is dropped. A `message` in an item is used if it's there; else the message is fetched (a saved reply isn't found that way).
+- Done: `saved.update` with `item_type, item_id, ts, mark=completed` (`completed` guessed as the pair of `uncompleted`).
+- Remove: `saved.delete` with `item_type, item_id, ts` (FOUND, above).
+- The `saved_*` RTM events' bodies aren't read: any of them fetches the list again, once it's been opened.
 
 ## 5. Drafts
 

@@ -87,6 +87,7 @@ type Counts struct {
 		Uncompleted        int `json:"uncompleted_count"`
 		UncompletedOverdue int `json:"uncompleted_overdue_count"`
 	} `json:"saved"`
+	Activity jsontext.Value `json:"activity_v2"` // see Badge
 }
 
 func (c *Client) Counts(ctx context.Context) (Counts, error) {
