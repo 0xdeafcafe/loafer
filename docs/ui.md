@@ -130,7 +130,7 @@ Both looks:
   ↓ 4 more unread           │
                             │ ╭ to #prod-alerts-page ───────────── enter sends · ⇧enter line ╮
                             │ │ ❯ a message for #prod-alerts-page                             │
-                            │ ╰ @ mention · : emoji · ctrl+u file ─────────────── ✎ draft ──╯
+                            │ ╰ @ mention · : emoji · ctrl+o file ─────────────── ✎ draft ──╯
   ↑↓ move · enter open · t thread · . actions · ctrl+k jump
 ```
 
@@ -462,6 +462,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `d d` or `delete delete` | bin it, if it's yours |
 | `c` `l` | copy its text, copy a link to it |
 | `o` | open its first link (http, https and mailto only) |
+| `s` `O` | save its files to `~/Downloads`, or save and open them with `open`. A name that's taken becomes `name (1).ext` |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
@@ -473,6 +474,12 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
 
 **Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+
+**Files**: `ctrl+o` in a box (the conversation's or a thread's) opens a prompt for a path, starting at `~/`. It lists what completes it as you type, dotfiles only once you type the dot. `↑↓` choose, `tab` completes (a folder, to look inside it), `enter` attaches what's typed, `esc` closes it. Pasting a path into the prompt works too. A path pasted into an empty box, which is what a terminal types for a file dropped on it (quoted, or with its spaces escaped, or several), asks `attach name?` in the box's top edge: `enter` attaches, any other key declines and the paste goes in as text. That's also what happens when it isn't a file. Attached files sit above the text as chips (`▤ name · size`), and `backspace` at the start of the box takes the last off. Each box has its own.
+
+`enter` sends them, with what's written as their comment (a box of only chips sends too). The box empties, and a bar with a percent stands where the chips were while the file goes up, straight from disk and reported about ten times a second. When it's sent the message comes in over the websocket. One upload goes at a time. In a thread's box it's a reply, and `ctrl+b` sends it to the channel as well. A file past Slack's 1 GB limit, an empty one, or one that isn't a file is refused when you attach it, with the reason. If the upload fails, the chips and the words go back in the box.
+
+On a message with files, `s` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
 **Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 

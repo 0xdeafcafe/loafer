@@ -43,6 +43,7 @@ type Server struct {
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
+	files    map[string]*file
 }
 
 type conv struct {
@@ -53,10 +54,12 @@ type conv struct {
 
 // New starts a server holding the workspace in workspace.go.
 func New() *Server {
-	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}}
+	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	s.seed(time.Now())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
+	mux.HandleFunc("/upload/", s.upload)
+	mux.HandleFunc("/files/", s.download)
 	mux.HandleFunc("/", s.socket)
 	s.Server = httptest.NewServer(mux)
 	return s
@@ -282,6 +285,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		ts := m.TS
 		s.remove(ch, ts)
 		return map[string]any{"channel": ch, "ts": ts}, ""
+
+	case "files.getUploadURLExternal", "files.completeUploadExternal":
+		return s.uploads(method, f)
 
 	case "conversations.mark":
 		if c == nil {
