@@ -52,14 +52,14 @@ Dependencies stay as rush's (bubbletea v2, ultraviolet, x/ansi, x/image) plus th
 
 ### Threads (goroutines)
 
-- **UI goroutine**: bubbletea. Never does I/O, decoding or parsing. Guarded by rush's `uithread` stall watchdog (75 ms).
+- **UI goroutine**: bubbletea. Never does I/O, decoding or parsing. Watched for stalls: any message or frame over 75 ms is logged (see Debugging).
 - **Socket goroutine** per workspace: reads frames, decodes into typed events, applies them to the store, sends one coalesced `changedMsg` to the UI (at most one per frame).
 - **API workers**: a bounded pool (4) with per-method rate limiting and request coalescing (two screens asking for the same `users/info` share one call).
 - **Image workers**: 2 slots, as in rush.
 
 ### Store
 
-One owner of state, behind a mutex with short critical sections; the UI reads immutable snapshots.
+One owner of state, behind a mutex with short critical sections; the UI reads immutable snapshots. Short matters for readers too: a writer waiting on a long read holds back the frame's read behind it, so the cache save only copies under the lock (and encodes the windows, whose messages change in place) and encodes the rest after it.
 
 - Users, channels, emoji: interned IDs, compact structs. Loaded from disk cache at start, refreshed from `client.userBoot` / `client.counts` / edge `users/info` incremental (`updated_ids`).
 - Messages: per channel, a window of the most recent ~300 kept in RAM; older pages fetched on scroll and dropped when scrolled away. Only the 20 most recently viewed channels keep a window (LRU); the rest keep counts and the latest message only.
@@ -85,7 +85,7 @@ Typing indicators and presence are shown but throttled to one UI update per 250 
 
 ### Images
 
-Avatars and image attachments via termimg (kitty placeholders; blocks fallback; initials if graphics are off). Fetched at the cell-pixel size, decoded and scaled off-thread, stored on disk as small PNGs keyed by URL hash, at most ~300 decoded in RAM (LRU). Placeholders live in cached rows, so scrolling costs nothing.
+Avatars and image attachments via termimg (kitty placeholders; blocks fallback; initials if graphics are off). Fetched at the cell-pixel size, decoded and scaled off-thread, stored on disk as small PNGs keyed by URL hash, at most ~300 decoded in RAM (LRU). Placeholders live in cached rows, so scrolling costs nothing. A first load lands hundreds at once, so landings are heard at most once each 50 ms (nothing wakes while none are landing), and each draws again only the cached rows drawn while a picture they asked for wasn't there yet. The Kitty transmissions go to the terminal about 128 KB per landing heard, so a burst of them doesn't queue up the frames behind it.
 
 ## Screens
 
@@ -160,7 +160,7 @@ Setup: `loafer app init` prints a ready-made app manifest (`slackapp/manifest.ya
 - **Debug strip** (`F12`): heap/RSS, CPU %, goroutines, GC count, last/avg/max frame ms, skipped frames, socket state and lag, API in flight, cache sizes.
 - **Event viewer** (`F11`): the live ring, filterable by kind, channel, method; Enter shows the payload.
 - **Profiling**: `--pprof localhost:6061` serves net/http/pprof. `ctrl+alt+p` writes 30 s CPU, heap, goroutine, and a 5 s runtime/trace to `~/Library/Logs/loafer/prof/<time>/`. `MemProfileRate` stays 0 unless `LOAFER_MEMPROFILE=1`.
-- **Stall watchdog**: rush's `uithread`; any UI goroutine block over 75 ms logs a stack.
+- **Stall watchdog**: any message handled or frame drawn on the UI goroutine over 75 ms logs `stall` with what it was (the message type, or `frame`), the ms, and what was on screen: tab, conversation, thread open, size and frame bytes (`internal/ui/stall.go`). No stack yet: rush's `uithread` isn't wired in.
 - **Soak**: `loafer --soak 60s 200x60 --replay <events.jsonl>` runs the real UI headless against a recorded event stream and prints CPU, RSS, peak heap, and frame stats. Recordings come from `--record`, redacted.
 - **Bug report**: `loafer report` zips the last logs, profiles, version, terminal and settings (secrets stripped) for a bug found while dogfooding.
 - **Benchmarks**: message render, mrkdwn parse, list scroll, frame compose, event apply; numbers go in `docs/perf.md` with the commands to repeat them.
