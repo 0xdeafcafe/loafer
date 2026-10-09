@@ -86,7 +86,7 @@ func (s *Server) serveFolk(method string, f url.Values) (out map[string]any, cod
 		return map[string]any{"usergroups": s.folk.groups}, "", true
 
 	case "users.info":
-		for _, u := range s.users {
+		for _, u := range append(s.users, s.outside...) {
 			if u.ID == f.Get("user") {
 				return map[string]any{"user": u}, "", true
 			}
@@ -94,4 +94,15 @@ func (s *Server) serveFolk(method string, f url.Values) (out map[string]any, cod
 		return nil, "user_not_found", true
 	}
 	return nil, "", false
+}
+
+// Stranger adds someone from outside the workspace, as Slack Connect's
+// are: users.list leaves them out and users.info knows them. dm is your
+// DM with them, which boot lists.
+func (s *Server) Stranger(u slack.User, dm string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.outside = append(s.outside, u)
+	s.convs[dm] = &conv{Conversation: slack.Conversation{ID: dm, IsIM: true, IsOpen: true, User: u.ID}}
+	s.order = append(s.order, dm)
 }
