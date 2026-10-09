@@ -117,7 +117,7 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 		body = append(body, canvas.Row{canvas.T("⚑ pinned", ink.Dim)})
 	}
 	if len(m.Reactions) > 0 {
-		body = append(body, reactionRow(p, v, m.Reactions))
+		body = append(body, reactionRows(p, v, m.Reactions, bodyW)...)
 	}
 	if m.ReplyCount > 0 {
 		t := strconv.Itoa(m.ReplyCount) + " replies"
@@ -179,14 +179,15 @@ func clock(t, now time.Time) string {
 	return strings.ToLower(t.Format("2 Jan 15:04"))
 }
 
-func reactionRow(p *Palette, v store.View, rs []slack.Reaction) canvas.Row {
+// reactionRows are a message.s reactions as Slack.s pills, the emoji and
+// its count on a chip, yours warm with an orange count, wrapped a whole
+// pill at a time to w.
+func reactionRows(p *Palette, v store.View, rs []slack.Reaction, w int) []canvas.Row {
+	var out []canvas.Row
 	var r canvas.Row
-	for i, x := range rs {
-		if i > 0 {
-			r = append(r, canvas.T(" ", p.Main.Text))
-		}
+	for _, x := range rs {
 		e, std := emojiText(x.Name)
-		chip, count := p.Chip, p.Chip.Fg(p.Main.Dim.FG)
+		chip, count := p.Chip, p.Chip.Fg(p.Main.Sub.FG)
 		if slices.Contains(x.Users, v.Self()) {
 			chip, count = p.Ask, p.Ask.Fg(p.Orange.FG).With(canvas.Bold) // yours stand out
 		}
@@ -197,7 +198,14 @@ func reactionRow(p *Palette, v store.View, rs []slack.Reaction) canvas.Row {
 				glyph = canvas.Row{canvas.T(" ", chip), pic, canvas.T(" ", chip)}
 			}
 		}
-		r = append(append(r, glyph...), canvas.T(strconv.Itoa(x.Count)+" ", count))
+		pill := append(glyph, canvas.T(strconv.Itoa(x.Count)+" ", count))
+		if len(r) > 0 && r.Width()+1+pill.Width() > w {
+			out, r = append(out, r), nil
+		}
+		if len(r) > 0 {
+			r = append(r, canvas.T(" ", p.Main.Text))
+		}
+		r = append(r, pill...)
 	}
-	return r
+	return append(out, r)
 }

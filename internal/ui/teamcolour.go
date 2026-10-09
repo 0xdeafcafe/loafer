@@ -32,7 +32,6 @@ func teamColour(t slack.Team) theme.RGB {
 	return wsColours[h.Sum32()%uint32(len(wsColours))]
 }
 
-
 // railInk is text that reads on c: the header's on a dark colour, dark
 // text on a light one.
 func railInk(c theme.RGB) theme.RGB {

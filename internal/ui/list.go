@@ -95,6 +95,7 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 		missed := picMisses()
 		defer m.pix.drew(key, missed)
 		drawn = renderMessage(&m.pal, v, msg, w-1, header, now)
+		m.hov.n++
 		for j := range drawn {
 			drawn[j] = canvas.Fit(append(canvas.Row{canvas.T(" ", ink.Text)}, drawn[j]...), w, ink.Text)
 		}
@@ -102,6 +103,8 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 	}
 	if msg.TS == m.sel && m.focus == onMsgs {
 		drawn = m.lit(msg.TS, m.picked(drawn))
+	} else if msg.TS == m.hov.ts && !m.th.in {
+		drawn = m.hovered(drawn, w)
 	}
 	var above []canvas.Row
 	// The two dividers are one family (docs/ui.md, Messages): a thin rule
@@ -117,6 +120,7 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 	if header && prev != nil {
 		above = append(above, canvas.Fit(nil, w, ink.Text))
 	}
+	m.hov.above = len(above)
 	if len(above) == 0 {
 		return drawn
 	}
@@ -197,18 +201,36 @@ func (m *Model) messages(v store.View, c *store.Conv, w, h int) []canvas.Row {
 	s := m.index.Find(total - m.scroll - 1)
 	hang := m.scroll - (total - m.index.Prefix(s+1))
 	var blocks [][]canvas.Row
+	var aboves []int
 	got := 0
 	for i := s; i >= 0 && got < h+hang; i-- {
 		b := draw(i)
 		blocks = append(blocks, b)
+		aboves = append(aboves, m.hov.above)
 		got += len(b)
 	}
 	all := make([]canvas.Row, 0, got)
-	for i := len(blocks) - 1; i >= 0; i-- {
-		all = append(all, blocks[i]...)
+	rec := !m.th.in // which message each row is, for the hover (hover.go)
+	if rec {
+		m.hov.rows = m.hov.rows[:0]
+	}
+	for k := len(blocks) - 1; k >= 0; k-- {
+		all = append(all, blocks[k]...)
+		for j := range blocks[k] {
+			if rec {
+				ts := ""
+				if j >= aboves[k] {
+					ts = msgs[s-k].TS
+				}
+				m.hov.rows = append(m.hov.rows, ts)
+			}
+		}
 	}
 	end := max(0, len(all)-hang)
 	out = append(out, all[max(0, end-h):end]...)
+	if rec {
+		m.hov.from, m.hov.lead = max(0, end-h), h-len(out)
+	}
 	m.drawn.Evict(nil)
 	if len(m.heights) > 4*keepRows { // shortcut: forgets every height at once, fine at this size
 		clear(m.heights)
