@@ -25,6 +25,8 @@ type Conv struct {
 	Unread   bool   `json:"unread,omitempty"`
 	Archived bool   `json:"archived,omitempty"`
 	Members  int    `json:"members,omitempty"`
+	Muted    bool   `json:"muted,omitempty"`
+	Preview  bool   `json:"-"` // a channel you're not in, being read (manage.go)
 }
 
 // Person is a member or bot, as messages and lists show them.
@@ -56,6 +58,7 @@ type Window struct {
 	More  bool            `json:"more"`
 	Newer bool            `json:"newer,omitempty"`
 	used  uint64          // the store's clock when last viewed, for eviction
+	stale bool            // held across a gap (the socket down, or from the cache): live messages skip it till a Refresh, so none sits after a hole
 }
 
 func person(u slack.User) Person {

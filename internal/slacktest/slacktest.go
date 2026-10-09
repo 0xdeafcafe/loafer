@@ -39,6 +39,7 @@ type Server struct {
 	convs    map[string]*conv
 	order    []string // conversation ids, as boot lists them
 	sections []slack.Section
+	prefs    map[string]string // users.prefs.set, and what boot lists (manage.go)
 	emoji    map[string]string
 	saved    []slack.SavedItem
 	calls    []Call
@@ -56,7 +57,7 @@ type conv struct {
 
 // New starts a server holding the workspace in workspace.go.
 func New() *Server {
-	s := &Server{convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
+	s := &Server{prefs: map[string]string{}, convs: map[string]*conv{}, socks: map[*websocket.Conn]bool{}, files: map[string]*file{}}
 	s.seed(time.Now())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.api)
@@ -230,7 +231,7 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 				chans = append(chans, c.wire())
 			}
 		}
-		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims}, ""
+		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims, "prefs": s.prefs}, ""
 
 	case "client.counts":
 		var chans, mpims, ims []slack.Snapshot
@@ -385,6 +386,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 		}
 		s.pushAny(map[string]any{"type": kind, "channel": ch, "ts": c.LastRead})
 		return map[string]any{}, ""
+	}
+	if out, code, ok := s.manage(method, f); ok {
+		return out, code
 	}
 	return map[string]any{}, "" // the rest say ok and do nothing
 }

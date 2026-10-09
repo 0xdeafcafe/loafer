@@ -68,8 +68,9 @@ func (s *Store) Live(ctx context.Context, c *slack.Client) error {
 }
 
 // catchUp fetches what changed while the socket was down: everything, if
-// the boot never got through, else the counts and the conversation looked
-// at last (others refresh as they're opened).
+// the boot never got through, else the counts, and the conversation and
+// thread looked at last. Other conversations held go stale and refresh as
+// they're opened.
 func (s *Store) catchUp(ctx context.Context, c *slack.Client) error {
 	if !s.booted.Load() {
 		return s.Boot(ctx, c)
@@ -79,19 +80,34 @@ func (s *Store) catchUp(ctx context.Context, c *slack.Client) error {
 		return err
 	}
 	s.ApplyCounts(n)
-	last := ""
-	s.Read(func(v View) {
+	last, thread := "", ""
+	s.update(func() {
 		var at uint64
-		for id, w := range v.s.windows {
+		for id, w := range s.windows {
 			if w.used > at {
 				last, at = id, w.used
 			}
 		}
+		for id, w := range s.windows {
+			w.stale = w.stale || id != last
+		}
+		at = 0
+		for k, w := range s.threads {
+			if w.used > at {
+				thread, at = k, w.used
+			}
+		}
 	})
-	if last == "" {
+	if last != "" {
+		if err := s.Refresh(ctx, c, last); err != nil {
+			return err
+		}
+	}
+	if thread == "" {
 		return nil
 	}
-	return s.Refresh(ctx, c, last)
+	conv, ts, _ := strings.Cut(thread, "/")
+	return s.OpenThread(ctx, c, conv, ts)
 }
 
 func (s *Store) setLink(l string) {
@@ -215,6 +231,9 @@ func (s *Store) Apply(ev slack.Event) {
 	case "pref_change", "dnd_updated", "user_typing":
 		s.applyAlert(ev)
 
+	case "channel_section_upserted", "channel_section_deleted", "channel_sections_channels_upserted", "channel_sections_channels_removed":
+		s.applySection(ev)
+
 	case "user_change":
 		var e struct {
 			User slack.User `json:"user"`
@@ -247,7 +266,7 @@ func (s *Store) Add(conv string, m slack.Message) {
 			}
 			return
 		}
-		if w := s.windows[conv]; w != nil && !w.Newer { // a window back in time doesn't reach it
+		if w := s.windows[conv]; w != nil && !w.Newer && !w.stale { // one back in time, or across a gap, doesn't reach it
 			i, found := slices.BinarySearchFunc(w.Msgs, m.TS, func(x slack.Message, ts string) int { return strings.Compare(x.TS, ts) })
 			if found {
 				w.Msgs[i] = m

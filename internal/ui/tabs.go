@@ -150,6 +150,10 @@ func (m *Model) tabKey(s string) tea.Cmd {
 		if m.tabs.on == tabLater {
 			return m.finish(s == "d")
 		}
+	case "n":
+		if m.tabs.on == tabDMs {
+			return m.openNewDM()
+		}
 	}
 	return nil
 }
@@ -244,7 +248,7 @@ func (m *Model) finish(done bool) tea.Cmd {
 func (m *Model) tabHints() [][2]string {
 	switch m.tabs.on {
 	case tabDMs:
-		return [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
+		return [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "new"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
 	case tabActivity:
 		return [][2]string{{"↑↓", "move"}, {"enter", "go to it"}, {"alt+1-5", "tabs"}, {"tab", "messages"}}
 	case tabLater:

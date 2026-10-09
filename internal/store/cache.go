@@ -59,7 +59,7 @@ func (s *Store) Load(path string) error {
 			s.convs[snap.Convs[i].ID] = &snap.Convs[i]
 		}
 		for id, msgs := range snap.Windows {
-			s.windows[id] = &Window{Msgs: msgs, More: true}
+			s.windows[id] = &Window{Msgs: msgs, More: true, stale: true} // it's been a while
 			s.touch(id)
 		}
 	})

@@ -95,6 +95,31 @@ func (m *Model) window(v store.View) *store.Window {
 // narrow says the thread takes the conversation's place.
 func (m *Model) narrow() bool { return m.w < 100 }
 
+// threadW is the pane's width beside the conversation: rush's sideWidth.
+func (m *Model) threadW() int { return min(64, max(30, m.w*28/100)) }
+
+// uncover closes the thread when focus is going to the conversation it
+// hides, in the narrow layout, so focus never lands on what can't be seen.
+func (m *Model) uncover(f focus) {
+	if !m.th.in && m.th.ts != "" && m.narrow() && (f == onMsgs || f == onCompose) {
+		m.closeThread()
+	}
+}
+
+// wheel scrolls what's under the pointer: the thread, when it's showing
+// there, else the conversation.
+func (m *Model) wheel(msg tea.MouseWheelMsg) {
+	d := 3
+	if msg.Button != tea.MouseWheelUp {
+		d = -3
+	}
+	if m.th.ts != "" && m.tabs.on != tabClaude && (m.narrow() || msg.X >= m.w-m.threadW()) {
+		m.inThread(func() { m.scroll = max(0, m.scroll+d) })
+		return
+	}
+	m.scroll = max(0, m.scroll+d)
+}
+
 // threadAt opens the selected message's thread: t on any message, to
 // start one; enter and → only where there is one, enter writing otherwise.
 func (m *Model) threadAt(s string) tea.Cmd {
@@ -290,7 +315,7 @@ func (m *Model) panes(v store.View, w, h int) []canvas.Row {
 	case m.narrow():
 		return m.thread(v, w, h)
 	}
-	tw := min(64, max(30, m.w*28/100))
+	tw := m.threadW()
 	div := make([]canvas.Row, h)
 	for i := range div {
 		div[i] = canvas.Row{canvas.T("│", m.pal.Main.Faint)}

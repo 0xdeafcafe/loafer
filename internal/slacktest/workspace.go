@@ -32,6 +32,8 @@ const (
 	PriyaDM  = "D0PRIYA"
 	JoDM     = "D0JO"
 	DeployDM = "D0DEPLOY"
+	Books    = "C0BOOKS" // a channel you're not in
+	Old      = "C0OLD"   // an archived one
 )
 
 func (s *Server) seed(now time.Time) {
@@ -172,6 +174,15 @@ func (s *Server) seed(now time.Time) {
 	deployed := say(DeployBot, "your deploy to *staging* finished in 2m 14s")
 	deployed.BotID = "B0DEPLOY"
 	fill(DeployDM, 19*time.Minute, 0, deployed)
+
+	// Channels you're not in: they're in conversations.list, not in boot.
+	for _, c := range []slack.Conversation{
+		{ID: Books, Name: "bookclub", IsChannel: true, NumMembers: 7, Purpose: slack.Text{Value: "one chapter a fortnight"}},
+		{ID: Old, Name: "old-launch", IsChannel: true, IsArchived: true, NumMembers: 3},
+	} {
+		s.convs[c.ID] = &conv{Conversation: c, replies: map[string][]slack.Message{}}
+	}
+	fill(Books, 3*time.Hour, 0, say(Jo, "chapter four is the one with the bakery"), say(Priya, "I'm behind, no spoilers"))
 
 	s.last = now.UnixMicro()
 }

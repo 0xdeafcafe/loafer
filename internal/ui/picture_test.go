@@ -17,6 +17,7 @@ import (
 	"github.com/0xdeafcafe/loafer/internal/images"
 	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/photon/canvas"
+	"github.com/0xdeafcafe/photon/cellw"
 	"github.com/0xdeafcafe/photon/termimg"
 )
 
@@ -109,6 +110,70 @@ func TestAvatarLands(t *testing.T) {
 	m.openJump()
 	if hasPicture(m.render()) {
 		t.Fatal("a picture behind the overlay")
+	}
+}
+
+// landUntil lets pictures land until ok, drawing between.
+func landUntil(t *testing.T, m *Model, ok func([]canvas.Row) bool) []canvas.Row {
+	t.Helper()
+	for range 10 {
+		if rows := m.render(); ok(rows) {
+			return rows
+		}
+		land(t, m)
+	}
+	t.Fatal("never drawn as it should be")
+	return nil
+}
+
+// pictures counts the picture segments in rows, and checks each is as
+// wide as it says, so wrapping lines with them in measures them right.
+func pictures(t *testing.T, rows []canvas.Row) int {
+	t.Helper()
+	n := 0
+	for _, r := range rows {
+		for _, s := range r {
+			if strings.ContainsRune(s.Text, kitty.Placeholder) {
+				n++
+				if w := cellw.String(s.Text); w != s.W {
+					t.Fatalf("a picture %d wide measures %d", s.W, w)
+				}
+			}
+		}
+	}
+	return n
+}
+
+// A workspace's own emoji are pictures, in the text and in reactions, and
+// a thread's repliers are 1-cell avatars after "↩ N replies".
+func TestCustomEmojiAndRepliers(t *testing.T) {
+	open := make(chan struct{})
+	close(open)
+	srv := withPics(t, open)
+	m := fixture(t)
+	u := slack.User{ID: "U1", Name: "drew"}
+	u.Profile.Image72 = srv.URL + "/drew.png"
+	m.st.ApplyPeople([]slack.User{u})
+	m.st.ApplyEmoji(map[string]string{"partyparrot": srv.URL + "/parrot.gif", "pp": "alias:partyparrot"})
+	long := strings.Repeat("words to wrap ", 12)
+	m.st.SetWindow("C1", []slack.Message{{
+		TS: "1999999999.000100", User: "U0", Text: long + ":pp: " + long,
+		Reactions:  []slack.Reaction{{Name: "partyparrot", Count: 1, Users: []string{"U1"}}},
+		ReplyCount: 2, LatestReply: "1999999999.000200", ReplyUsers: []string{"U1", "U9"},
+	}}, false, false)
+	if text := frameText(m); !strings.Contains(text, ":pp:") || !strings.Contains(text, ":partyparrot:") {
+		t.Fatalf("names while they're on their way:\n%s", text)
+	}
+	// The emoji twice, and drew once beside the replies (alex has none).
+	rows := landUntil(t, m, func(rows []canvas.Row) bool { return pictures(t, rows) == 3 })
+	text := strings.Join(plainFrame(rows), "\n")
+	if strings.Contains(text, ":pp:") || strings.Contains(text, ":partyparrot:") {
+		t.Fatalf("names beside the pictures:\n%s", text)
+	}
+	for i, r := range rows {
+		if r.Width() != m.w {
+			t.Fatalf("row %d is %d wide", i, r.Width())
+		}
 	}
 }
 

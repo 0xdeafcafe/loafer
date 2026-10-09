@@ -247,6 +247,20 @@ Message shapes the renderer reads (`internal/ui/blocks.go`, `internal/mrkdwn/ric
 - UNCERTAIN: an attachment's `ts` is a number on legacy attachments and a string on message unfurls; read as either.
 - `files[]`: `name`, `title`, `mimetype`, `pretty_type`, `size`, `permalink`, `mode` (`tombstone` and `hidden_by_limit` carry no name).
 
+## Managing the sidebar (`internal/slack/manage.go`; UNVERIFIED, nothing here is tried against a live workspace)
+
+The documented ones, which take a session token, and what loafer reads:
+- Browse: `conversations.list` with `types=public_channel`, `exclude_archived=true`, `limit=200` and `cursor` from `response_metadata.next_cursor`; each channel's `name`, `is_member`, `num_members`, `purpose.value`. loafer fetches up to 25 pages and filters by name itself. The web client's own browse is `search.modules.channels` with `{search_channel_types:["exclude_archived","org_wide"],sort,sort_dir,limit:20,query,cursor,team_ids}` (§7), but its response isn't known, so it isn't used.
+- Read-only preview of a channel you're not in: `conversations.history` as for any channel. UNCERTAIN whether Slack lets a session token read every public channel's history; if not, the preview shows an error and `join` still works.
+- `conversations.join` with `channel` (answers `channel`), `conversations.leave` with `channel`, `conversations.close` with `channel`.
+- `conversations.open` with `users` (comma separated) and `return_im=true`, answering `channel{id,...}`. A one-person open is a DM, several a group DM. If the channel comes back without `is_im`/`is_mpim` or a name, loafer fills them in from who it asked for.
+
+The web client's, with guessed arguments:
+- Mute: `users.prefs.set` with `name=muted_channels` and `value` the comma separated ids (§ notification settings above). `pref_change` brings it back.
+- Fold a section: `users.channelSections.set` with `channel_section_id` and `is_collapsed=true|false`. GUESSED, method and keys; the registry has `.set`, `.create`, `.delete`, `.channels.bulkUpdate`, `.channels.remove` and `.entities.update` and no call site for any was recovered. A failed save leaves the fold in place here; it isn't kept past a restart, because boot's `is_collapsed` (also a guess) wins.
+- Move or star: `users.channelSections.channels.bulkUpdate` with `insert` and `remove`, each a JSON list of `{channel_section_id, channel_ids}`. GUESSED. Starring is a move into the section whose `type` is `stars`; unstarring is a remove from it, which sends the conversation back to its kind's section.
+- Events, bodies GUESSED from the handlers in §1 and each field optional: `channel_section_upserted` (`channel_section_id`, `name`, `emoji`, `channel_section_type`, `next_channel_section_id`, `is_collapsed`, `channel_ids_page.channel_ids`), `channel_section_deleted` (`channel_section_id`), `channel_sections_channels_upserted` and `_removed` (`channel_section_id`, `channel_ids`). `channel_joined`, `channel_left`, `im_created`, `im_close` and `mpim_close` are the classic RTM events.
+
 ## Other interesting methods (registry sample)
 
 `chat.postMessage/update/delete/shareMessage`, `reactions.add/get/remove`, `pins.add/list/remove`, `bookmarks.*`, `emoji.*`, `users.list`,
