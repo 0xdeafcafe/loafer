@@ -161,17 +161,18 @@ func (m *Model) buildSide(v store.View) {
 func (m *Model) sidebar(v store.View, w, h int) []canvas.Row {
 	ink := m.pal.Side
 	rows := make([]canvas.Row, 0, h)
+	rows = append(rows, canvas.Fit(nil, w, ink.Text)) // a row of air under the header
 	// Keep the selection in view, a few rows from either edge.
 	if m.sideAt < m.sideTop+2 {
 		m.sideTop = max(0, m.sideAt-2)
 	}
-	if m.sideAt > m.sideTop+h-3 {
-		m.sideTop = m.sideAt - h + 3
+	if m.sideAt > m.sideTop+h-4 {
+		m.sideTop = m.sideAt - h + 4
 	}
 	for i := m.sideTop; i < len(m.side) && len(rows) < h; i++ {
 		it := m.side[i]
 		if it.conv == "" {
-			if i > 0 {
+			if i > 0 && m.side[i-1].conv != "" { // folded sections stack tight
 				rows = append(rows, canvas.Fit(nil, w, ink.Text))
 				if len(rows) == h {
 					break

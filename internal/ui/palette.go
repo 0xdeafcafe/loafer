@@ -43,17 +43,22 @@ func inks(g theme.Ground) Inks {
 	}
 }
 
+// sideTint is how far the Side ground goes from the terminal's toward
+// the workspace colour: a hint of aubergine, not Slack's full slab.
+const sideTint = 0.3
+
 // NewPalette makes the palette for the terminal's ground and the
-// workspace's colour. On the workspace ground, rows lift by a step of
-// the workspace colour itself, as Slack's selected row does.
+// workspace's colour. The Side ground is the terminal's tinted toward
+// the workspace colour (sideTint); rows on it lift by a step toward its
+// text, as Slack's selected row does.
 func NewPalette(g theme.Ground, workspace theme.RGB, colorBlind bool) Palette {
-	side := theme.Ground{BG: workspace, FG: g.FG}
-	if !workspace.Dark() {
+	side := theme.Ground{BG: theme.Mix(g.BG, workspace, sideTint), FG: g.FG}
+	if !side.BG.Dark() {
 		side.FG = theme.Light.FG
 	}
 	p := Palette{Main: inks(g), Side: inks(side)}
-	p.Side.Sel = canvas.Style{}.Bg(theme.Mix(workspace, side.FG, 0.18)).Fg(side.FG)
-	p.Side.Hover = canvas.Style{}.Bg(theme.Mix(workspace, side.FG, 0.08)).Fg(side.FG)
+	p.Side.Sel = canvas.Style{}.Bg(theme.Mix(side.BG, side.FG, 0.14)).Fg(side.FG)
+	p.Side.Hover = canvas.Style{}.Bg(theme.Mix(side.BG, side.FG, 0.07)).Fg(side.FG)
 
 	accent := func(gr theme.Ground, c theme.RGB) canvas.Style { return canvas.Style{}.Bg(gr.BG).Fg(gr.Accent(c)) }
 	green, red := rgb(127, 191, 138), rgb(224, 104, 92)
