@@ -206,6 +206,16 @@ is not in this cache except the boot one above (`ignore_replies:!0`, `include_st
 `huddles.*`, `search.inline`, `files.external.preview`, `email.threads.share`, `ai.alpha.agents.threads.list`, `assistant.threads.rename`,
 `meetings.processRecording`, `today.items.update`, `workflows.templates.get`, `functions.categories.steps.list`, `client.codeChannels.*`.
 
+## Composer text on the wire (loafer's assumption)
+
+`chat.postMessage` and `chat.update` take mrkdwn `text`: `<@U123>`, `<#C123>` (the web client adds `|name`, which is optional), `<!here>`, `<!channel>`, `<!everyone>`, links as `<url|label>`, and `&`, `<`, `>` as `&amp;`, `&lt;`, `&gt;`. loafer sends exactly that and has not been run against a live workspace yet. If Slack turns out to want `blocks` rich_text for mentions to ping, the composer's mention list already has what's needed to build them.
+
+## Reactions and emoji (loafer's assumptions)
+
+`reactions.add` and `reactions.remove` take `channel`, `timestamp` and `name`, as the public API does; the registry above lists both but no call site was recovered. Errors loafer treats as "already how you wanted it": `already_reacted` and `no_reaction`. Names are iamcal/emoji-data's `short_name` (`+1`, not its alias `thumbsup`), with skin tones as `name::skin-tone-2` to `6`; loafer files a reaction under that canonical name so Slack's `reaction_added` event lands on the same chip. Two-tone names (`handshake::skin-tone-2-3`) are UNCERTAIN and not drawn as characters.
+
+UNCERTAIN, not used yet: the web client seems to rank its picker by a `emoji_use` entry in `users.prefs` (a JSON map of name to count, by memory), which would give "frequently used" across runs. Loafer keeps this session's reactions instead.
+
 ## Not recovered / suggested next step
 
 views.* args, activity.markRead and subscriptions.thread.mark wire keys, users.channelSections.* args, client.dms args, search.modules messages/people,

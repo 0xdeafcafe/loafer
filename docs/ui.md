@@ -214,7 +214,7 @@ Rendering:
 - **Dividers** are a faint rule inside the `▌`.
 - **Images** use kitty placeholders up to 12 rows tall, or `▣ name 1200×800` when graphics are off.
 
-Reactions: chips with the emoji and count. Yours have an orange count, others dim. `☺+` adds one. Custom emoji are 2×1-cell images, or `:name:` in dim.
+Reactions: chips with the emoji and count. Yours sit on a warm chip with an orange count, others dim. `r` on the message adds one, `1`-`9` toggles one that's there. Custom emoji are 2×1-cell images, or `:name:` in dim.
 
 Mentions inside text:
 - `@Alex` (you) is bold yellow on the `askBG` fill.
@@ -441,6 +441,8 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `@` | the previous mention of you (or @here, @channel), wrapping round |
 | `g` `G` | oldest, newest |
 | `e` | edit it, if it's yours |
+| `r` | react: a picker over every emoji, yours and the usual ones first. `enter` adds it, or takes it away if it's already yours (marked ✓) |
+| `1`-`9` | toggle the message's nth reaction, in the order they're drawn |
 | `d d` or `delete delete` | bin it, if it's yours |
 | `c` `l` | copy its text, copy a link to it |
 | `o` | open its first link (http, https and mailto only) |
@@ -449,7 +451,13 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
-Not yet: thread keys (`t`, `→`), reactions (`r`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
+Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
+
+**Mentions**: `@` or `#` after a space (or at the start) opens a list above the box, narrowing as you type. `@` offers people by handle and display name, those in the open conversation and your recent DMs first, bots last and only once you've typed something, deactivated people not at all, plus `@here`, `@channel` and `@everyone` outside DMs. `#` offers the channels you're in. `↑↓` choose, `tab` or `enter` accept, `esc` dismisses it until you start another. The box keeps the readable `@Alex` or `#general`; sending encodes it as `<@U123>`, `<#C123>` or `<!here>`, and escapes `&` `<` `>` in the rest. A mention is one piece: backspace takes all of it, and typing inside one turns it into plain text. Editing a message decodes every `<…>` into a piece, so links and user groups go back exactly as they came. Names are matched a word at a time, so a space ends the query.
+
+**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
+
+Not yet: thread keys (`t`, `→`), save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 
 ## Notices
 

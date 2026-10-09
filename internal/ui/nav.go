@@ -245,19 +245,16 @@ func (m *Model) edit(msg slack.Message) tea.Cmd {
 	if !m.own(msg) {
 		return m.say("that one's not yours to edit", false)
 	}
-	m.drafts[m.open] = m.input // what was being written comes back after
+	m.keep(m.open) // what was being written comes back after
 	m.editing = msg.TS
-	m.input = []rune(mrkdwn.Unescape(msg.Text))
-	m.cur = len(m.input)
+	m.st.Read(func(v store.View) { m.load(decode(v, msg.Text)) })
 	m.focus = onCompose
 	return nil
 }
 
 func (m *Model) cancelEdit() {
 	m.editing = ""
-	m.input = m.drafts[m.open]
-	m.cur = len(m.input)
-	delete(m.drafts, m.open)
+	m.restore(m.open)
 }
 
 // remove deletes msg, on the second press of d.

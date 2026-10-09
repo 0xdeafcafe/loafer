@@ -26,6 +26,14 @@ func TestLookup(t *testing.T) {
 	}
 }
 
+func TestCanon(t *testing.T) {
+	for in, want := range map[string]string{"thumbsup": "+1", "+1": "+1", "thumbsup::skin-tone-3": "+1::skin-tone-3", "custom": "custom"} {
+		if got := Canon(in); got != want {
+			t.Errorf("Canon(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestNames(t *testing.T) {
 	ns := Names()
 	if len(ns) < 1800 {

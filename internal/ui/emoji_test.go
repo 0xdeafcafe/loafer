@@ -36,12 +36,6 @@ func reactionsOn(m *Model, ts string) (got map[string][]string) {
 
 var emojiEnter = tea.KeyPressMsg{Code: tea.KeyEnter}
 
-func typeText(m *Model, s string) {
-	for _, c := range s {
-		press(m, r(c))
-	}
-}
-
 func TestEmojiInText(t *testing.T) {
 	m := fixture(t)
 	addNewest(t, m, "hello :smile: :nonesuch: :+1::skin-tone-3: :thumbsup:")
@@ -129,42 +123,39 @@ func TestEmojiComplete(t *testing.T) {
 	m := fixture(t)
 	press(m, tab, tab) // the composer
 	typeText(m, "see :sm")
-	p := m.emo.pop
-	if !p.on || len(p.hits) == 0 || p.hits[0].name != "smile" {
-		t.Fatalf("popup for :sm: %+v", p)
+	if !m.pop.on || len(m.pop.items) == 0 || m.pop.items[0].label != ":smile:" || m.pop.items[0].detail != "😄" {
+		t.Fatalf("popup for :sm: %+v", m.pop)
 	}
 	text := strings.Join(plainFrame(m.render()), "\n")
 	if testing.Verbose() {
 		t.Log("\n" + text)
 	}
-	if !strings.Contains(text, "😄 smile") {
+	if !strings.Contains(text, ":smile:  😄") {
 		t.Fatalf("popup not drawn:\n%s", text)
 	}
 	press(m, tab)
-	if got := string(m.input); got != "see :smile: " || m.emo.pop.on || m.focus != onCompose {
+	if got := string(m.input); got != "see :smile: " || m.pop.on || m.focus != onCompose {
 		t.Fatalf("tab should complete it, got %q (focus %v)", got, m.focus)
 	}
 
-	// esc closes it but not the composer, and typing on reopens it.
+	// esc closes it but not the composer.
 	typeText(m, ":sm")
 	press(m, esc)
-	if m.emo.pop.on || m.focus != onCompose {
+	if m.pop.on || m.focus != onCompose {
 		t.Fatal("esc should only close the popup")
 	}
-	typeText(m, "i")
-	if !m.emo.pop.on {
-		t.Fatal("typing on should reopen it")
-	}
+
+	// enter completes rather than sends.
+	typeText(m, " :tad")
 	press(m, emojiEnter)
-	if got := string(m.input); !strings.HasPrefix(got, "see :smile: :smi") || !strings.HasSuffix(got, ": ") || len(m.drafts) != 0 {
+	if got := string(m.input); got != "see :smile: :sm :tada: " || len(m.drafts) != 0 {
 		t.Fatalf("enter should complete, not send: %q", got)
 	}
 
 	// Times and smileys aren't shortcodes.
 	m.input, m.cur = nil, 0
 	typeText(m, "at 10:30 :) x:ab")
-	press(m, r(' '))
-	if m.emo.pop.on {
+	if m.pop.on {
 		t.Fatalf("popup for %q", string(m.input))
 	}
 }
