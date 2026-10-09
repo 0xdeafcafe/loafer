@@ -90,6 +90,7 @@ type element struct {
 	InitialDate string `json:"initial_date"`
 	InitialTime string `json:"initial_time"`
 	AltText     string `json:"alt_text"`
+	ImageURL    string `json:"image_url"` // a context's image
 }
 
 // bodyRows is a message's text, or its blocks when it has them. Slack
@@ -152,7 +153,10 @@ func blockOf(p *Palette, v store.View, raw jsontext.Value, w int, gap bool) (row
 		var r canvas.Row
 		for _, e := range els {
 			if e.Text == nil {
-				continue // an image: an icon beside the text, for the images lane
+				if s, ok := inlinePic(e.ImageURL); ok {
+					r = append(r, s)
+				}
+				continue
 			}
 			t := textObj{Type: e.Type, Text: e.Text.Text}
 			for _, l := range t.lines() {
@@ -199,14 +203,14 @@ func unsupported(p *Palette, kind string, w int) []canvas.Row {
 	return canvas.Wrap(canvas.Row{canvas.T(t, p.Main.Faint)}, w)
 }
 
-// imageRows is an image's stand-in, "▣ alt 1200×800". The images lane
-// draws the picture from src here instead, when graphics are on.
+// imageRows is an image: its picture where the terminal draws them, then
+// "▣ alt 1200×800" as its caption (or all there is, where it doesn't).
 func imageRows(p *Palette, src, label string, iw, ih, w int) []canvas.Row {
 	t := "▣ " + cmp.Or(label, "image")
 	if iw > 0 && ih > 0 {
 		t += " " + strconv.Itoa(iw) + "×" + strconv.Itoa(ih)
 	}
-	return canvas.Wrap(canvas.Row{canvas.T(t, p.Main.Dim)}, w)
+	return append(pictureRows(src, iw, ih, w), canvas.Wrap(canvas.Row{canvas.T(t, p.Main.Dim)}, w)...)
 }
 
 // chip is an interactive element as it reads: a button's label on its
@@ -450,6 +454,7 @@ func fileRows(p *Palette, raw jsontext.Value, w int) []canvas.Row {
 			switch strings.Split(f.Mimetype, "/")[0] {
 			case "image":
 				icon = "▣ "
+				out = append(out, filePicture(x, w)...)
 			case "video":
 				icon = "▶ "
 			case "audio":
