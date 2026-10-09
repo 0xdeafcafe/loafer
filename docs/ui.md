@@ -186,6 +186,7 @@ Notes:
   - **Selected message**: `selBG` fill plus the orange `▍`, like any row. Its actions are in the hint line and the `.` menu.
 - **Composer**: rush's input box, quietened. The rounded edge is faint (`Edge`), orange when focused, and carries no labels in the usual case: the placeholder says where it goes (`a message for # dev`) and the hint line what enter does. The top edge says `editing your message`, `reply in thread` (with the `☐ also #channel` tick on the right) or an attachment's question when there is one. Inside are the `❯` and a faint placeholder.
 - Mockups further down draw an avatar as a short `██`; it is the same 4×2 as here.
+- **Focus**: one place looks live at a time, in orange: the sidebar's `▍` cursor, the message cursor, or the composer's edge (faint otherwise). Away from the sidebar it shows only the open conversation, with the plum `▍`; away from the messages there's no message cursor. The hint line follows focus too.
 - **Hint line**: at most five pairs, for where you are, the rest being in the `.` menu and below (Keys); `ctrl+n N need you` leads in yellow while there are any. In the sidebar `enter open · n next unread · tab messages · q quit`; on a message `. actions · t thread · r react · esc newest`; in the box `enter send · shift+enter new line · ctrl+o attach · esc messages`.
 
 ## Thread open (side pane)
@@ -515,7 +516,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
 | `ctrl+end` | the open conversation's newest message, reading it (outside the thread, where it's the thread's newest) |
 
-**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits. Headings are stopped on. Managing it: `z` fold, `m` mute, `*` star, `s` move to a section, `x` leave or close, `b` browse channels, `N` new DM (see Managing conversations).
+**Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` or `→` opens it and goes into its messages, `i` into its box, `q` quits. Headings are stopped on. Managing it: `z` fold, `m` mute, `*` star, `s` move to a section, `x` leave or close, `b` browse channels, `N` new DM (see Managing conversations).
 
 **DMs, Activity and Later lists**: `↑↓` or `j k`, `pgup pgdn`, `g G`, `enter` opens it, and in Later `d` done and `x` remove. `tab` goes to the conversation beside them, and `esc` there comes back.
 
@@ -523,7 +524,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 
 | key | does |
 |---|---|
-| `↑↓` `j k`, `pgup pgdn` | a message, or about a page of them. Going past the oldest fetches older |
+| `↑↓` `j k`, `pgup pgdn` | a message, or about a page of them. Going past the oldest fetches older; `↓` past the newest goes to the box |
 | `{` `}` | to the start of this run of messages by one person, then the run before; the next run |
 | `n` | the first message you hadn't read when you opened it |
 | `@` | the previous mention of you (or @here, @channel), wrapping round |
@@ -541,13 +542,14 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `P` | pin it, or unpin it |
 | `u` | mark unread from here |
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
+| `←` | the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
 | `a` | ask Claude about it: the Claude tab, with it and five messages either side attached |
 | `b` `shift+b` | step through its buttons and menus; `enter` presses the chosen one, `esc` lets it go (Block Kit, above) |
 | `i` | write |
 
-**Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
+**Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message (or, with none of yours there, goes up to the messages), `←` in an empty box goes to the sidebar, `esc` (or `shift+tab`) cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
 Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line, `ctrl+←` `ctrl+→` (or `alt+b` `alt+f`, since `alt+←→` are back and forward) move by word, `↑` `↓` move between the lines of a longer message, `ctrl+u` cuts to the start of the line and `ctrl+k` to the end. The box grows to six lines, then scrolls to keep the cursor in view. `shift+enter` needs a terminal that reports it (kitty, wezterm, ghostty, iTerm2 with CSI u); `alt+enter` and `ctrl+j` work everywhere.
 
