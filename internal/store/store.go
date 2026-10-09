@@ -41,6 +41,8 @@ type Store struct {
 	md       modals // apps' modals (modal.go)
 
 	booted atomic.Bool // a boot has got through
+	done   uint32      // Boot's steps finished, failed or not (progress.go)
+	failed uint32
 	al     alertState  // notification rules and typing (alert.go)
 
 	version atomic.Uint64

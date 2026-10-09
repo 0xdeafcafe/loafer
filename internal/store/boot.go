@@ -35,20 +35,29 @@ func (s *Store) Boot(ctx context.Context, c *slack.Client) error {
 		b, err := c.UserBoot(ctx)
 		if err == nil {
 			s.ApplyBoot(b)
+		}
+		s.stepped(StepBoot, err)
+		if err == nil {
 			// Counts name conversations boot brought, so they go after it.
 			var n slack.Counts
 			if n, err = c.Counts(ctx); err == nil {
 				s.ApplyCounts(n)
 			}
+			s.stepped(StepCounts, err)
 		}
 		must(err)
 	})
-	wg.Go(func() { may("users", c.Users(ctx, s.ApplyPeople)) })
+	wg.Go(func() {
+		err := c.Users(ctx, s.ApplyPeople)
+		s.stepped(StepPeople, err)
+		may("users", err)
+	})
 	wg.Go(func() {
 		e, err := c.Emoji(ctx)
 		if err == nil {
 			s.ApplyEmoji(e)
 		}
+		s.stepped(StepEmoji, err)
 		may("emoji", err)
 	})
 	wg.Go(func() {
@@ -56,6 +65,7 @@ func (s *Store) Boot(ctx context.Context, c *slack.Client) error {
 		if err == nil {
 			s.ApplySections(ss)
 		}
+		s.stepped(StepSections, err)
 		may("sections", err)
 	})
 	wg.Go(func() {

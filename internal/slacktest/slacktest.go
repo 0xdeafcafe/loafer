@@ -48,6 +48,7 @@ type Server struct {
 	folk     folk  // presence, user groups (people.go)
 	files    map[string]*file
 	out      bool // signed out: every call is invalid_auth and the socket won't open
+	holds    map[string]chan struct{} // methods whose answers wait (hold.go)
 }
 
 type conv struct {
@@ -209,6 +210,7 @@ func (s *Server) Typing(channel, user string) {
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 	method := strings.TrimPrefix(r.URL.Path, "/api/")
+	s.held(r.Context(), method)
 	_ = r.ParseForm()
 	f := r.PostForm
 	f.Del("token")
