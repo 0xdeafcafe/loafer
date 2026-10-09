@@ -46,6 +46,17 @@ func TestNames(t *testing.T) {
 	}
 }
 
+func TestGroups(t *testing.T) {
+	gs := Groups()
+	n := 0
+	for _, g := range gs {
+		n += len(g.Names)
+	}
+	if len(gs) != 9 || gs[0].Name != "Smileys & Emotion" || gs[0].Names[0] != "grinning" || gs[8].Name != "Flags" || n < 1800 {
+		t.Fatalf("%d groups, %d emoji: %+v", len(gs), n, gs[0].Name)
+	}
+}
+
 func BenchmarkLookup(b *testing.B) {
 	Lookup("smile")
 	for b.Loop() {

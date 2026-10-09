@@ -3,6 +3,7 @@
 package emoji
 
 const data = "" +
+	"#Smileys & Emotion\n" +
 	"grinning\t😀\n" +
 	"smiley\t😃\n" +
 	"smile\t😄\n" +
@@ -174,6 +175,7 @@ const data = "" +
 	"right_anger_bubble\t🗯️\n" +
 	"thought_balloon\t💭\n" +
 	"zzz\t💤\n" +
+	"#People & Body\n" +
 	"wave\t👋\t👋🏻\t👋🏼\t👋🏽\t👋🏾\t👋🏿\n" +
 	"raised_back_of_hand\t🤚\t🤚🏻\t🤚🏼\t🤚🏽\t🤚🏾\t🤚🏿\n" +
 	"raised_hand_with_fingers_splayed\t🖐️\t🖐🏻\t🖐🏼\t🖐🏽\t🖐🏾\t🖐🏿\n" +
@@ -562,11 +564,13 @@ const data = "" +
 	"family_adult_child_child\t🧑\u200d🧒\u200d🧒\n" +
 	"footprints\t👣\n" +
 	"fingerprint\t🫆\n" +
+	"#Component\n" +
 	"skin-tone-2\t🏻\n" +
 	"skin-tone-3\t🏼\n" +
 	"skin-tone-4\t🏽\n" +
 	"skin-tone-5\t🏾\n" +
 	"skin-tone-6\t🏿\n" +
+	"#Animals & Nature\n" +
 	"monkey_face\t🐵\n" +
 	"monkey\t🐒\n" +
 	"gorilla\t🦍\n" +
@@ -727,6 +731,7 @@ const data = "" +
 	"nest_with_eggs\t🪺\n" +
 	"mushroom\t🍄\n" +
 	"leafless_tree\t🪾\n" +
+	"#Food & Drink\n" +
 	"grapes\t🍇\n" +
 	"melon\t🍈\n" +
 	"watermelon\t🍉\n" +
@@ -858,6 +863,7 @@ const data = "" +
 	"hocho,knife\t🔪\n" +
 	"jar\t🫙\n" +
 	"amphora\t🏺\n" +
+	"#Travel & Places\n" +
 	"earth_africa\t🌍\n" +
 	"earth_americas\t🌎\n" +
 	"earth_asia\t🌏\n" +
@@ -1077,6 +1083,7 @@ const data = "" +
 	"fire\t🔥\n" +
 	"droplet\t💧\n" +
 	"ocean\t🌊\n" +
+	"#Activities\n" +
 	"jack_o_lantern\t🎃\n" +
 	"christmas_tree\t🎄\n" +
 	"fireworks\t🎆\n" +
@@ -1162,6 +1169,7 @@ const data = "" +
 	"sewing_needle\t🪡\n" +
 	"yarn\t🧶\n" +
 	"knot\t🪢\n" +
+	"#Objects\n" +
 	"eyeglasses\t👓\n" +
 	"dark_sunglasses\t🕶️\n" +
 	"goggles\t🥽\n" +
@@ -1428,6 +1436,7 @@ const data = "" +
 	"moyai\t🗿\n" +
 	"placard\t🪧\n" +
 	"identification_card\t🪪\n" +
+	"#Symbols\n" +
 	"atm\t🏧\n" +
 	"put_litter_in_its_place\t🚮\n" +
 	"potable_water\t🚰\n" +
@@ -1652,6 +1661,7 @@ const data = "" +
 	"radio_button\t🔘\n" +
 	"white_square_button\t🔳\n" +
 	"black_square_button\t🔲\n" +
+	"#Flags\n" +
 	"checkered_flag\t🏁\n" +
 	"triangular_flag_on_post\t🚩\n" +
 	"crossed_flags\t🎌\n" +
