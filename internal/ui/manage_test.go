@@ -56,7 +56,7 @@ func TestE2EBrowseAndJoin(t *testing.T) {
 	// enter reads it, with a join chip where the box would be.
 	d.press(tea.KeyPressMsg{Code: tea.KeyEnter})
 	d.until("the preview", func() bool { return d.m.open == slacktest.Books && d.has("chapter four is the one with the bakery") })
-	if !d.has("reading # bookclub") || !d.has(" join ") || d.has("enter sends") {
+	if !d.has("reading # bookclub") || !d.has(" join ") || d.has("❯ a message for") {
 		t.Fatalf("preview should carry a join chip and no box:\n%s", d.text)
 	}
 	if c, _ := d.conv(slacktest.Books); !c.Preview {
@@ -76,7 +76,7 @@ func TestE2EBrowseAndJoin(t *testing.T) {
 		t.Fatalf("focus %v", d.m.focus)
 	}
 	d.press(r('j'))
-	d.until("joined", func() bool { c, _ := d.conv(slacktest.Books); return !c.Preview && d.has("to # bookclub") })
+	d.until("joined", func() bool { c, _ := d.conv(slacktest.Books); return !c.Preview && d.has("a message for # bookclub") })
 	if d.called("conversations.mark", "channel", slacktest.Books) {
 		t.Fatal("marked a channel read that wasn't joined")
 	}

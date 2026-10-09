@@ -104,14 +104,15 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 		drawn = m.lit(msg.TS, m.picked(drawn))
 	}
 	var above []canvas.Row
+	// The two dividers are one family (docs/ui.md, Messages): a thin rule
+	// across the pane with its label set into it, the day's centred in
+	// sub on a faint rule, "new" at the right in orange on a quieter one.
 	if newLine {
-		rule := canvas.Row{canvas.T(strings.Repeat("─", max(0, w-6)), m.pal.Orange), canvas.T(" new ", m.pal.Orange.With(canvas.Bold))}
-		above = append(above, canvas.Fit(rule, w, ink.Text))
+		above = append(above, m.divider(w, "new", w-8, m.pal.NewRule, m.pal.Orange.With(canvas.Bold)))
 	}
 	if dayLine {
-		label := " " + day(tsTime(msg.TS), now) + " "
-		pad := max(0, (w-cellw.String(label))/2)
-		above = append(above, canvas.Fit(canvas.Row{canvas.T(strings.Repeat(" ", pad), ink.Text), canvas.T(label, ink.Sub.With(canvas.Bold))}, w, ink.Text))
+		label := day(tsTime(msg.TS), now)
+		above = append(above, m.divider(w, label, (w-cellw.String(label)-2)/2, ink.Faint, ink.Sub.With(canvas.Bold)))
 	}
 	if header && prev != nil {
 		above = append(above, canvas.Fit(nil, w, ink.Text))
@@ -213,4 +214,17 @@ func (m *Model) messages(v store.View, c *store.Conv, w, h int) []canvas.Row {
 		clear(m.heights)
 	}
 	return pad()
+}
+
+// divider is a rule across w with " label " set in at column at, the
+// pane's one-cell margin kept at either end.
+func (m *Model) divider(w int, label string, at int, rule, text canvas.Style) canvas.Row {
+	ground := m.pal.Main.Text
+	lw := cellw.String(label) + 2
+	at = max(2, min(at, w-lw-1))
+	row := canvas.Row{canvas.T(" ", ground), canvas.T(strings.Repeat("─", at-1), rule), canvas.T(" "+label+" ", text)}
+	if rest := w - at - lw - 1; rest > 0 {
+		row = append(row, canvas.T(strings.Repeat("─", rest), rule))
+	}
+	return canvas.Fit(row, w, ground)
 }

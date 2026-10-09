@@ -11,7 +11,6 @@ import (
 	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/slacktest"
 	"github.com/0xdeafcafe/loafer/internal/store"
-	"github.com/0xdeafcafe/photon/theme"
 )
 
 // multiE2E is e2e for a Multi over two fake workspaces at once: Crumb &
@@ -209,21 +208,6 @@ func TestTeamColour(t *testing.T) {
 	a, b := teamColour(slack.Team{ID: "T0CRUMB"}), teamColour(slack.Team{ID: "T0CRUMB", Colour: "nope"})
 	if a != b {
 		t.Errorf("the hash should be stable: %v %v", a, b)
-	}
-}
-
-func TestWashReads(t *testing.T) {
-	p := NewPalette(theme.Dark, Aubergine, false)
-	for _, to := range append(wsColours, rgb(248, 248, 250), rgb(255, 230, 0)) {
-		cols := washColours(p.Side, to, 120)
-		if cols[0] != p.Side.Ground || cols[71] != p.Side.Ground {
-			t.Fatal("the first 60% should be plain")
-		}
-		for _, c := range cols {
-			if theme.Contrast(p.Side.Dim.FG, c) < min(3, theme.Contrast(p.Side.Dim.FG, p.Side.Ground))-0.01 {
-				t.Fatalf("dim unreadable on %v washing to %v", c, to)
-			}
-		}
 	}
 }
 

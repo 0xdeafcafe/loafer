@@ -71,7 +71,7 @@ func hasPicture(rows []canvas.Row) bool {
 func TestPicturesOffKeepsInitials(t *testing.T) {
 	m := fixture(t)
 	text := strings.Join(plainFrame(m.render()), "\n")
-	if !strings.Contains(text, "Dr drew") {
+	if !strings.Contains(text, " Dr  drew") {
 		t.Fatalf("no initials:\n%s", text)
 	}
 	if hasPicture(m.render()) {
@@ -79,7 +79,7 @@ func TestPicturesOffKeepsInitials(t *testing.T) {
 	}
 }
 
-// An avatar is 2 cells on the header row once it lands, the initials till
+// An avatar is 4 cells by 2 beside the header once it lands, the initials till
 // then, and the frame stays exactly its size.
 func TestAvatarLands(t *testing.T) {
 	gate := make(chan struct{})
@@ -89,7 +89,7 @@ func TestAvatarLands(t *testing.T) {
 	u.Profile.Image72 = srv.URL + "/drew.png"
 	m.st.ApplyPeople([]slack.User{u})
 	text := strings.Join(plainFrame(m.render()), "\n")
-	if !strings.Contains(text, "Dr drew") {
+	if !strings.Contains(text, " Dr  drew") {
 		t.Fatalf("initials while it's on its way:\n%s", text)
 	}
 	close(gate)
@@ -103,7 +103,7 @@ func TestAvatarLands(t *testing.T) {
 			t.Fatalf("row %d is %d wide", i, r.Width())
 		}
 	}
-	if text := strings.Join(plainFrame(rows), "\n"); strings.Contains(text, "Dr drew") {
+	if text := strings.Join(plainFrame(rows), "\n"); strings.Contains(text, " Dr  drew") {
 		t.Fatalf("initials beside the avatar:\n%s", text)
 	}
 	// Behind ctrl+k, pictures blank: their ids went with their colours.

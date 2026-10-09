@@ -259,15 +259,15 @@ func (m *Model) tabHints() [][2]string {
 
 // --- drawing ---
 
-// tabRow is the header's second row: the tabs, with their badges, yellow
-// where they're things that want you.
+// tabRow is the header's tabs, with their badges, yellow where they're
+// things that want you.
 func (m *Model) tabRow(v store.View) canvas.Row {
 	ink := m.pal.Side
-	row := canvas.Row{canvas.T(" ", ink.Text)}
+	var row canvas.Row
 	for t, name := range tabNames {
 		st := ink.Dim
 		if tabID(t) == m.tabs.on {
-			st = ink.Sel.With(canvas.Bold)
+			st = ink.Sel.Fg(m.pal.Brand.FG).With(canvas.Bold)
 		}
 		row = append(row, canvas.T(" "+name+" ", st))
 		if l, ok := tabID(t).list(); ok {
@@ -280,7 +280,7 @@ func (m *Model) tabRow(v store.View) canvas.Row {
 			}
 		}
 	}
-	return canvas.Fit(row, m.w, ink.Text)
+	return row
 }
 
 // left is the pane where the sidebar goes: the sidebar on Home, else the

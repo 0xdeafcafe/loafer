@@ -81,7 +81,6 @@ type Model struct {
 	wel    welcome // the cold start's welcome (welcome.go)
 
 	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
-	wash washCache // the header's wash (wash.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
