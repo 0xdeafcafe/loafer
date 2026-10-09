@@ -127,8 +127,9 @@ func (m *Model) fold() tea.Cmd {
 	}
 }
 
-// sideHead draws a section's heading: its fold, its name and how many
-// conversations a fold hides.
+// sideHead draws a section's heading as a plain label (no rule): a faint
+// caret in the glyph column, the name dim, and how many conversations a
+// fold hides, faint.
 func (m *Model) sideHead(it sideItem, w int, selected bool) canvas.Row {
 	ink := m.pal.Side
 	name := it.section
@@ -148,12 +149,9 @@ func (m *Model) sideHead(it sideItem, w int, selected bool) canvas.Row {
 	if it.folded {
 		fold = "▸ "
 	}
-	head := canvas.Row{mark, canvas.T(fold, base.Fg(ink.Faint.FG)), canvas.T(name+" ", base.Fg(ink.Sub.FG).With(canvas.Bold))}
+	head := canvas.Row{mark, canvas.T(" "+fold, base.Fg(ink.Faint.FG)), canvas.T(name, base.Fg(ink.Dim.FG))}
 	if it.hidden > 0 {
-		head = append(head, canvas.T(strconv.Itoa(it.hidden)+" ", base.Fg(ink.Dim.FG)))
-	}
-	if fill := w - head.Width(); fill > 0 {
-		head = append(head, canvas.T(strings.Repeat("─", fill), base.Fg(ink.Faint.FG)))
+		head = append(head, canvas.T("  "+strconv.Itoa(it.hidden), base.Fg(ink.Faint.FG)))
 	}
 	return canvas.Fit(head, w, base)
 }

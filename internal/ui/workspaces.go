@@ -158,8 +158,7 @@ func (x *Multi) route(w wsMsg) tea.Cmd {
 		// is drawn again by every one.
 		for j, m := range x.ws {
 			if j != w.i {
-				m.drawn.Clear()
-				m.claude.redraw()
+				m.landed()
 			}
 		}
 	}

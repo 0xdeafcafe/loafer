@@ -56,7 +56,7 @@ func TestMessageCursor(t *testing.T) {
 	if m.sel != ts(0) || m.scroll == 0 {
 		t.Fatalf("g: sel %q scroll %d", m.sel, m.scroll)
 	}
-	if text := strings.Join(plainFrame(m.render()), "\n"); !strings.Contains(text, "▍Al alex") || !strings.Contains(text, "message 0 ") {
+	if text := strings.Join(plainFrame(m.render()), "\n"); !strings.Contains(text, "▍ Al  alex") || !strings.Contains(text, "message 0 ") {
 		t.Fatalf("the cursor's message isn't in view:\n%s", text)
 	}
 	press(m, r('G'))

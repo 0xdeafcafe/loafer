@@ -5,7 +5,6 @@ package ui
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -82,7 +81,6 @@ type Model struct {
 	wel    welcome // the cold start's welcome (welcome.go)
 
 	ws   *wsSlot   // its place among several workspaces (workspaces.go); nil when it's the only one
-	wash washCache // the header's wash (wash.go)
 
 	live        string // connecting, live, offline, signed out
 	flash       string
@@ -90,6 +88,7 @@ type Model struct {
 	flashExpiry time.Time
 
 	drawn     *rows.Cache[rowKey, []canvas.Row] // messages as drawn
+	pix       picState                          // which of them wait on a picture (picture.go)
 	heights   map[string]int                    // each drawn message's rows, by ts
 	index     rows.Index                        // the open window's messages' rows
 	indexOf   indexKey
@@ -256,12 +255,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	began := time.Now()
-	defer func() {
-		if d := time.Since(began); d > 75*time.Millisecond {
-			slog.Warn("stall", "what", fmt.Sprintf("%T", msg), "ms", d.Milliseconds())
-		}
-	}()
+	defer m.stalled(time.Now(), msg)
 	if cmd, ok := m.onWelcome(msg); ok {
 		return m, cmd
 	}

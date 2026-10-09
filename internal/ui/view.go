@@ -24,6 +24,7 @@ func (m *Model) View() tea.View {
 		canvas.Emit(&m.frame, m.railed(m.render()))
 		drawn = true
 		obs.Frame(time.Since(began))
+		m.stalled(began, nil)
 		return m.frame.String()
 	})
 	if !drawn {
@@ -37,7 +38,7 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-const headerH = 3 // two rows and a rule
+const headerH = 2 // a row and a rule
 
 func (m *Model) render() []canvas.Row {
 	if m.w < 20 || m.h < 8 {
@@ -85,12 +86,17 @@ func (m *Model) render() []canvas.Row {
 func (m *Model) header(v store.View) []canvas.Row {
 	ink := m.pal.Side
 	mentions, unread := m.sc.mentions, m.sc.unread
-	row1 := canvas.Row{canvas.T(" loafer", ink.Bright.With(canvas.Bold|canvas.Italic)), canvas.T("  "+v.Team().Name, ink.Text)}
+	// One row (docs/ui.md, Header): who and where on the left, then the
+	// tabs; what wants you and the connection on the right. Narrow, the
+	// counts go first, then the wordmark.
+	brand := canvas.Row{canvas.T(" loafer", m.pal.Brand.With(canvas.Bold|canvas.Italic)), canvas.T("  "+v.Team().Name, ink.Sub)}
+	tabs := append(canvas.Row{canvas.T("    ", ink.Text)}, m.tabRow(v)...)
+	var counts canvas.Row
 	if mentions > 0 {
-		row1 = append(row1, canvas.T(fmt.Sprintf("   @ %d mentions", mentions), m.pal.SideYellow.With(canvas.Bold)))
+		counts = append(counts, canvas.T(fmt.Sprintf("@ %d mentions   ", mentions), m.pal.SideYellow.With(canvas.Bold)))
 	}
 	if unread > 0 {
-		row1 = append(row1, canvas.T(fmt.Sprintf("   %d unread", unread), ink.Sub))
+		counts = append(counts, canvas.T(fmt.Sprintf("%d unread   ", unread), ink.Dim))
 	}
 	state := canvas.T("● live ", m.pal.SideGreen)
 	switch m.live {
@@ -101,11 +107,18 @@ func (m *Model) header(v store.View) []canvas.Row {
 	case "signed out":
 		state = canvas.T("✗ signed out · run loafer login ", ink.Text.Fg(m.pal.Red.FG))
 	}
-	row1 = rightAlign(row1, canvas.Row{state}, m.w, ink.Text)
-
-	row2 := m.tabRow(v)
+	left, right := append(brand, tabs...), append(counts, state)
+	if left.Width()+right.Width() > m.w && mentions > 0 {
+		right = canvas.Row{canvas.T(fmt.Sprintf("@%d   ", mentions), m.pal.SideYellow.With(canvas.Bold)), state}
+	}
+	if left.Width()+right.Width() > m.w {
+		right = canvas.Row{state}
+	}
+	if left.Width()+right.Width() > m.w {
+		left = append(canvas.Row{canvas.T(" ", ink.Text)}, tabs[1:]...)
+	}
 	rule := canvas.Row{canvas.T(strings.Repeat("─", m.w), m.pal.Main.Faint)}
-	return append(m.washed(v.Team(), row1, row2), rule)
+	return []canvas.Row{rightAlign(left, right, m.w, ink.Text), rule}
 }
 
 // rightAlign puts right at the end of left in w cells, cutting left if
@@ -164,17 +177,18 @@ func (m *Model) buildSide(v store.View) {
 func (m *Model) sidebar(v store.View, w, h int) []canvas.Row {
 	ink := m.pal.Side
 	rows := make([]canvas.Row, 0, h)
+	rows = append(rows, canvas.Fit(nil, w, ink.Text)) // a row of air under the header
 	// Keep the selection in view, a few rows from either edge.
 	if m.sideAt < m.sideTop+2 {
 		m.sideTop = max(0, m.sideAt-2)
 	}
-	if m.sideAt > m.sideTop+h-3 {
-		m.sideTop = m.sideAt - h + 3
+	if m.sideAt > m.sideTop+h-4 {
+		m.sideTop = m.sideAt - h + 4
 	}
 	for i := m.sideTop; i < len(m.side) && len(rows) < h; i++ {
 		it := m.side[i]
 		if it.conv == "" {
-			if i > 0 {
+			if i > 0 && m.side[i-1].conv != "" { // folded sections stack tight
 				rows = append(rows, canvas.Fit(nil, w, ink.Text))
 				if len(rows) == h {
 					break
@@ -225,6 +239,9 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 		name = ink.Faint.Bg(base.BG)
 	}
 	mark := canvas.T(" ", base)
+	if open { // the conversation showing: plum, Slack's own, where the cursor isn't
+		mark = canvas.T("▍", base.Fg(m.pal.Brand.FG))
+	}
 	if selected {
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
@@ -339,16 +356,16 @@ func (m *Model) composer(v store.View, c *store.Conv, w, most int) []canvas.Row 
 		}
 		return append(append(row, canvas.T(strings.Repeat("─", mid), edge)), tail...)
 	}
-	top := label("to "+convLabel(v, c), "enter sends · shift+enter new line", "╭", "╮")
+	top := label("", "", "╭", "╮") // the placeholder says where it goes, the hint line what enter does
 	if m.editing != "" {
-		top = label("editing your message", "enter saves · esc cancels", "╭", "╮")
+		top = label("editing your message", "", "╭", "╮")
 	}
 	if l, r := m.attachNote(); l != "" {
 		top = label(l, r, "╭", "╮")
 	}
 	bottom := label("", "", "╰", "╯")
 	if m.th.in && m.editing == "" {
-		top, bottom = label("reply in thread", m.also(v, c), "╭", "╮"), label("ctrl+b also send to channel", "", "╰", "╯")
+		top, bottom = label("reply in thread", m.also(v, c), "╭", "╮"), label("", "", "╰", "╯")
 	}
 
 	inner := max(4, w-6) // "│ ❯ " … " │"
@@ -428,30 +445,30 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.tabs.on != tabHome && (m.focus == onSide || m.tabs.on == tabClaude):
 		pairs = m.tabHints()
 	case m.focus == onSide:
-		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"b N", "browse, new dm"}, {"z m s x", "fold mute move leave"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
+		pairs = [][2]string{{"enter", "open"}, {"n", "next unread"}, {"tab", "messages"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {".", "actions"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"b", "buttons"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"D O", "download, open file"}, {"esc", "newest"}}
+		pairs = [][2]string{{".", "actions"}, {"t", "thread"}, {"r", "react"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
-		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
+		pairs = [][2]string{{"↑", "pick a message"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":
 		pairs = [][2]string{{"enter", "save"}, {"shift+enter", "new line"}, {"esc", "cancel"}}
 	default:
-		pairs = [][2]string{{"enter", "send"}, {"ctrl+o", "attach"}, {"↑", "edit last"}, {"alt+↑↓", "channels"}, {"alt+shift+↑↓", "unread"}, {"esc", "messages"}}
+		pairs = [][2]string{{"enter", "send"}, {"shift+enter", "new line"}, {"ctrl+o", "attach"}, {"esc", "messages"}}
 	}
 	needs := m.sc.needs
 	var lead canvas.Row
 	if needs > 0 {
-		lead = canvas.Row{canvas.T(" ctrl+n", m.pal.Yellow.With(canvas.Bold)), canvas.T(fmt.Sprintf(" %d need you", needs), m.pal.Yellow), canvas.T("  ·  ", ink.Faint)}
+		lead = canvas.Row{canvas.T("ctrl+n", m.pal.Yellow.With(canvas.Bold)), canvas.T(fmt.Sprintf(" %d need you", needs), m.pal.Yellow), canvas.T("  ·  ", ink.Faint)}
 	}
 	// As rush's keysFit: drop pairs from the end, but keep the last
 	// (the way out), until the line fits.
 	for {
-		row := append(canvas.Row{canvas.T(" ", ink.Text)}, lead...)
+		row := append(canvas.Row{canvas.T("  ", ink.Text)}, lead...)
 		for i, p := range pairs {
 			if i > 0 {
 				row = append(row, canvas.T("  ·  ", ink.Faint))
 			}
-			row = append(row, canvas.T(" "+p[0], ink.Text.With(canvas.Bold)), canvas.T(" "+p[1], ink.Dim))
+			row = append(row, canvas.T(p[0], ink.Sub.With(canvas.Bold)), canvas.T(" "+p[1], ink.Dim))
 		}
 		if row.Width() <= m.w || len(pairs) <= 2 {
 			return canvas.Fit(row, m.w, ink.Text)
