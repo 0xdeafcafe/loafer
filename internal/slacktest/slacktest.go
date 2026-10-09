@@ -43,8 +43,8 @@ type Server struct {
 	calls    []Call
 	socks    map[*websocket.Conn]bool
 	last     int64 // the newest ts handed out, in microseconds
+	out      bool   // signed out: every call is invalid_auth and the socket won't open
 	colour   string // the sidebar theme's colour in boot's prefs, if set
-	out      bool   // signed out: every call is invalid_auth
 }
 
 type conv struct {
@@ -73,14 +73,6 @@ func NewTeam(id, name, colour string) *Server {
 	defer s.mu.Unlock()
 	s.team.ID, s.team.Name, s.team.Domain, s.colour = id, name, strings.ToLower(id), colour
 	return s
-}
-
-// SignOut has Slack stop taking the sign-in: every call after it is
-// invalid_auth, as when you sign out of the desktop app.
-func (s *Server) SignOut() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.out = true
 }
 
 // Close hangs up the sockets and stops the server.
@@ -158,6 +150,27 @@ func (s *Server) Delete(channel, ts string) bool {
 	return s.remove(channel, ts)
 }
 
+// Sockets is how many websockets are open.
+func (s *Server) Sockets() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.socks)
+}
+
+// SetSignedOut has Slack stop taking the sign-in (hanging up the sockets),
+// or take it again.
+func (s *Server) SetSignedOut(out bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.out = out
+	if out {
+		for c := range s.socks {
+			c.CloseNow()
+			delete(s.socks, c)
+		}
+	}
+}
+
 // Typing says user is writing in channel.
 func (s *Server) Typing(channel, user string) {
 	s.mu.Lock()
@@ -174,8 +187,7 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 	f.Del("token")
 	s.mu.Lock()
 	s.calls = append(s.calls, Call{method, f})
-	var out map[string]any
-	code := "invalid_auth"
+	out, code := map[string]any(nil), "invalid_auth"
 	if !s.out {
 		out, code = s.serve(method, f)
 	}
@@ -448,6 +460,13 @@ func (s *Server) ts() string {
 // --- the websocket ---
 
 func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	out := s.out
+	s.mu.Unlock()
+	if out {
+		http.Error(w, "invalid_auth", http.StatusUnauthorized)
+		return
+	}
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"app.slack.com"}})
 	if err != nil {
 		return

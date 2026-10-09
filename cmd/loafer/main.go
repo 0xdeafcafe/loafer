@@ -27,7 +27,7 @@ func main() {
 	pprofAddr := flag.String("pprof", "", "serve net/http/pprof on this address, e.g. localhost:6061")
 	demoMode := flag.Bool("demo", false, "open a made-up workspace, with no sign-in, to try loafer")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  report    zip logs and the latest profile for a bug report\n  version   print the version\n\nflags:\n")
+		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  notifyd   notifications while loafer is closed: install, uninstall, status\n  report    zip logs and the latest profile for a bug report\n  version   print the version\n\nflags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -64,6 +64,9 @@ func main() {
 		stop()
 		exitIf(err)
 		return
+	case "notifyd":
+		exitIf(notifydCmd(flag.Arg(1)))
+		return
 	case "report":
 		name := fmt.Sprintf("loafer-report-%s.zip", time.Now().Format("2006-01-02T15-04-05"))
 		f, err := os.Create(name)
@@ -94,6 +97,7 @@ func main() {
 // run opens the default workspace, signing in first when there's no
 // sign-in to open or Slack has stopped taking it.
 func run() error {
+	defer takeOver()()
 	for {
 		ws, err := slack.Workspaces()
 		if err != nil {
