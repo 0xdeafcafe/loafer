@@ -73,6 +73,35 @@ func BenchmarkBigSave(b *testing.B) {
 	}
 }
 
+// How long a frame's Read waits while the cache is saved and the socket
+// writes: a waiting writer holds back new readers, so a Save holding the
+// lock long holds up the frame as long.
+func BenchmarkBigReadDuringSave(b *testing.B) {
+	s, _ := bigStore(b)
+	path := filepath.Join(b.TempDir(), "state.json")
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	go func() {
+		for ctx.Err() == nil {
+			s.Save(path)
+		}
+	}()
+	go func() {
+		for i := 0; ctx.Err() == nil; i++ {
+			s.MarkRead(slacktest.Big, fmt.Sprintf("%d.000100", 2000000000+i))
+			time.Sleep(time.Millisecond)
+		}
+	}()
+	var worst time.Duration
+	for b.Loop() {
+		began := time.Now()
+		s.Read(func(View) {})
+		worst = max(worst, time.Since(began))
+		time.Sleep(time.Millisecond)
+	}
+	b.ReportMetric(float64(worst.Microseconds()), "worst-µs")
+}
+
 func BenchmarkBigLoad(b *testing.B) {
 	s, _ := bigStore(b)
 	path := filepath.Join(b.TempDir(), "state.json")
