@@ -15,6 +15,7 @@ needs go 1.27.1 or newer, and macos for now (sign-ins live in the keychain).
 
 ```sh
 loafer            # open it, signing in first if it needs to
+loafer --demo     # try it on a made-up workspace, no sign-in needed
 loafer login      # sign in again, or to another workspace
 loafer app init   # loafer's own slack app, for phone pushes and shortcuts
 loafer report     # zip the logs and latest profile for a bug report
