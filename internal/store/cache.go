@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"encoding/json/jsontext"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/0xdeafcafe/loafer/internal/slack"
@@ -66,22 +68,40 @@ func (s *Store) Load(path string) error {
 	return nil
 }
 
-// Save writes the cache to path, atomically.
+// saved is a snapshot as Save writes it: the windows already encoded.
+type saved struct {
+	snapshot
+	Windows jsontext.Value `json:"windows"`
+}
+
+// Save writes the cache to path, atomically. Only copying is done under
+// the lock: people and conversations are plain values, sections change by
+// copy and the emoji map is swapped whole, so they're encoded after it.
+// Messages change in place, so the windows (a few hundred) are encoded
+// under it. A writer waits on a long Save, and a frame on the writer.
 func (s *Store) Save(path string) error {
-	snap := snapshot{Windows: map[string][]slack.Message{}}
+	var snap saved
+	windows := map[string][]slack.Message{}
 	s.mu.RLock()
-	snap.Self, snap.Team, snap.Sections, snap.Emoji = s.self, s.team, s.sections, s.emoji
+	snap.Self, snap.Team, snap.Sections, snap.Emoji = s.self, s.team, slices.Clone(s.sections), s.emoji
+	snap.People = make([]Person, 0, len(s.people))
 	for _, p := range s.people {
 		snap.People = append(snap.People, *p)
 	}
+	snap.Convs = make([]Conv, 0, len(s.convs))
 	for _, c := range s.convs {
 		snap.Convs = append(snap.Convs, *c)
 	}
 	for id, w := range s.windows {
-		snap.Windows[id] = w.Msgs[max(0, len(w.Msgs)-cacheMsgs):]
+		windows[id] = w.Msgs[max(0, len(w.Msgs)-cacheMsgs):]
 	}
-	b, err := jsonx.Marshal(snap)
+	b, err := jsonx.Marshal(windows)
 	s.mu.RUnlock()
+	if err != nil {
+		return err
+	}
+	snap.Windows = b
+	b, err = jsonx.Marshal(snap)
 	if err != nil {
 		return err
 	}

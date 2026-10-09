@@ -3,6 +3,7 @@ package ui
 import (
 	"cmp"
 	"encoding/json/jsontext"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	uv "github.com/charmbracelet/ultraviolet"
@@ -43,28 +44,83 @@ func (m *Model) startPics() tea.Cmd {
 	return tea.Batch(tea.Raw(termimg.QueryCell), m.waitPics())
 }
 
+// picsGap is the least time between two landings heard: a first load
+// lands hundreds of pictures, and each heard draws the screen again.
+const picsGap = 50 * time.Millisecond
+
+// picState is what's drawn waiting on a picture: when one lands, only
+// those rows are drawn again, not every one kept.
+type picState struct {
+	gen     uint64            // landings heard
+	waiting map[rowKey]uint64 // rows drawn without a picture, at the gen they were
+	at      time.Time         // the last landing heard
+}
+
+// stale says k's rows were drawn waiting on a picture that may have landed since.
+func (p *picState) stale(k rowKey) bool {
+	g, ok := p.waiting[k]
+	return ok && g < p.gen
+}
+
+// drew notes k's rows drawn, waiting on a picture if any was missed
+// since missed (picMisses before drawing them).
+func (p *picState) drew(k rowKey, missed uint64) {
+	if picMisses() == missed {
+		delete(p.waiting, k)
+		return
+	}
+	if p.waiting == nil {
+		p.waiting = map[rowKey]uint64{}
+	}
+	p.waiting[k] = p.gen
+}
+
+// picMisses counts the pictures asked for that weren't there yet.
+func picMisses() uint64 {
+	if pics == nil {
+		return 0
+	}
+	return pics.Misses()
+}
+
+// waitPics hears the next landing, at most one each picsGap; nothing
+// wakes while nothing's landing.
 func (m *Model) waitPics() tea.Cmd {
-	set := pics // read here, on the ui goroutine, not in the Cmd's
+	set, last := pics, m.pix.at // read here, on the ui goroutine, not in the Cmd's
 	return func() tea.Msg {
 		select {
 		case <-set.Landed():
-			return picsMsg{}
 		case <-m.ctx.Done():
 			return nil
 		}
+		time.Sleep(time.Until(last.Add(picsGap))) // what lands meanwhile comes with it
+		return picsMsg{}
 	}
 }
 
-// onPics takes what pictures hear: one landing, or the cell's size in
+// landed lets go of the rows drawn waiting on a picture.
+func (m *Model) landed() {
+	m.pix.gen++
+	if len(m.pix.waiting) > keepRows { // rows long gone; start again
+		m.drawn.Clear()
+		clear(m.pix.waiting)
+	}
+	m.claude.redraw()
+}
+
+// onPics takes what pictures hear: landings, or the cell's size in
 // pixels. It says whether msg was one.
 func (m *Model) onPics(msg tea.Msg) (tea.Cmd, bool) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case picsMsg:
+		m.pix.at = time.Now()
 		cmd = m.waitPics()
 		if s := pics.Writes(); s != "" {
 			cmd = tea.Batch(tea.Raw(s), cmd)
 		}
+		m.landed()
+		return cmd, true
 	case uv.CellSizeEvent:
 		termimg.SetCell(msg.Width, msg.Height)
 	case uv.PixelSizeEvent:
@@ -75,7 +131,8 @@ func (m *Model) onPics(msg tea.Msg) (tea.Cmd, bool) {
 	default:
 		return nil, false
 	}
-	m.drawn.Clear()
+	m.drawn.Clear() // every picture's another size now
+	clear(m.pix.waiting)
 	m.claude.redraw()
 	return cmd, true
 }

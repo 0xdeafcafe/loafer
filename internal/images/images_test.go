@@ -124,8 +124,34 @@ func TestDedupe(t *testing.T) {
 	}
 	close(gate)
 	wait(t, s, srv.URL+"/a.png", 2, 1)
+	if m := s.Misses(); m < 50 {
+		t.Fatalf("%d misses, want each ask before it landed", m)
+	}
 	if n := hits.Load(); n != 1 {
 		t.Fatalf("fetched %d times", n)
+	}
+}
+
+// A burst of transmissions goes out a writeMost at a time, never split,
+// with Landed saying there's more.
+func TestWritesPaced(t *testing.T) {
+	s := New(context.Background(), get, "")
+	big := strings.Repeat("x", writeMost/3)
+	s.writes = []string{big, big, big, big, big + big + big + big}
+	for i, want := range []int{3, 1, 4} {
+		if n := len(s.Writes()); n != want*len(big) {
+			t.Fatalf("write %d is %d bytes, want %d", i, n, want*len(big))
+		}
+		if more := len(s.writes) > 0; more != (len(s.Landed()) == 1) {
+			t.Fatalf("write %d: more left %v, said %v", i, more, !more)
+		}
+		select {
+		case <-s.Landed():
+		default:
+		}
+	}
+	if s.Writes() != "" {
+		t.Fatal("writes after the last")
 	}
 }
 
