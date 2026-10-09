@@ -25,6 +25,8 @@ type Conv struct {
 	Unread   bool   `json:"unread,omitempty"`
 	Archived bool   `json:"archived,omitempty"`
 	Members  int    `json:"members,omitempty"`
+	Muted    bool   `json:"muted,omitempty"`
+	Preview  bool   `json:"-"` // a channel you're not in, being read (manage.go)
 }
 
 // Person is a member or bot, as messages and lists show them.

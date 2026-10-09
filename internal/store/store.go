@@ -27,6 +27,7 @@ type Store struct {
 	team     slack.Team
 	people   map[string]*Person
 	convs    map[string]*Conv
+	preview  *Conv // a channel being read before joining (manage.go)
 	sections []Section
 	emoji    map[string]string
 	windows  map[string]*Window
@@ -106,6 +107,10 @@ func (s *Store) putConv(c slack.Conversation) {
 		s.convs[c.ID] = v
 	}
 	v.Name, v.User, v.Topic, v.Members = c.Name, c.User, c.Topic.Value, c.NumMembers
+	v.Muted = s.al.prefs.Muted(c.ID)
+	if s.preview != nil && s.preview.ID == c.ID {
+		s.preview = nil // joined
+	}
 	switch {
 	case c.IsIM:
 		v.Kind = IM

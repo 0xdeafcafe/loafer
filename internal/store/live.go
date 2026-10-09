@@ -218,6 +218,9 @@ func (s *Store) Apply(ev slack.Event) {
 	case "pref_change", "dnd_updated", "user_typing":
 		s.applyAlert(ev)
 
+	case "channel_section_upserted", "channel_section_deleted", "channel_sections_channels_upserted", "channel_sections_channels_removed":
+		s.applySection(ev)
+
 	case "user_change":
 		var e struct {
 			User slack.User `json:"user"`
