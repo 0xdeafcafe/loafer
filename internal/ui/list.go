@@ -91,7 +91,9 @@ func (m *Model) block(v store.View, msgs []slack.Message, i, w int, now time.Tim
 	newLine, dayLine, header := m.dividers(v, prev, msg)
 	key := rowKey{msg.TS, fingerprint(msg), w, header}
 	drawn, ok := m.drawn.Get(key)
-	if !ok {
+	if !ok || m.pix.stale(key) {
+		missed := picMisses()
+		defer m.pix.drew(key, missed)
 		drawn = renderMessage(&m.pal, v, msg, w-1, header, now)
 		for j := range drawn {
 			drawn[j] = canvas.Fit(append(canvas.Row{canvas.T(" ", ink.Text)}, drawn[j]...), w, ink.Text)
