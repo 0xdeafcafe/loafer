@@ -3,7 +3,8 @@
 // takes, and kept on disk as a small PNG by its URL's hash; the last few
 // hundred are kept in memory, and one asked for again while it's on its
 // way is fetched only the once. Landed says when one's ready, and Writes
-// is what to send the terminal, raw, so it can draw them.
+// is what to send the terminal, raw, so it can draw them, a little at a
+// time so a burst of them doesn't hold up the frames queued behind it.
 package images
 
 import (
@@ -23,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
@@ -39,6 +41,10 @@ const keep = 300
 // diskCap is the most the PNGs on disk may come to; past it, the oldest
 // go when loafer next starts.
 const diskCap = 64 << 20
+
+// writeMost is about the most Writes hands out at once: a transmission is
+// never split, so one bigger goes on its own.
+const writeMost = 128 << 10
 
 // retryAfter is how long a picture that couldn't be made waits before
 // it's tried the once more, when it's next asked for.
@@ -80,7 +86,8 @@ type Set struct {
 	mu      sync.Mutex
 	made    *rows.Cache[key, Pic]
 	pending map[key]bool
-	writes  strings.Builder
+	writes  []string // transmissions not yet taken
+	misses  atomic.Uint64
 }
 
 // New makes a Set fetching with fetch and keeping PNGs in dir, which it
@@ -116,10 +123,12 @@ func (s *Set) Get(url string, cols, rows int) (Pic, bool) {
 	if p, ok := s.made.Get(k); ok {
 		if p.tries == 1 && time.Since(p.failed) >= retryAfter && !s.pending[k] {
 			s.pending[k] = true
+			s.misses.Add(1)
 			go s.make(k)
 		}
 		return p, true
 	}
+	s.misses.Add(1)
 	if !s.pending[k] {
 		s.pending[k] = true
 		go s.make(k)
@@ -130,14 +139,35 @@ func (s *Set) Get(url string, cols, rows int) (Pic, bool) {
 // Landed has a value once a picture's been made since it was last taken.
 func (s *Set) Landed() <-chan struct{} { return s.landed }
 
-// Writes takes the Kitty transmissions made since it was last called, to
-// be written to the terminal raw; "" when there are none.
+// Misses counts the asks a picture wasn't ready for, or that started it
+// again: what's drawn between two readings that differ waits on one.
+func (s *Set) Misses() uint64 { return s.misses.Load() }
+
+// Writes takes the Kitty transmissions made since it was last called, up
+// to about writeMost bytes of them, to be written to the terminal raw;
+// "" when there are none. With more left, Landed has a value again.
 func (s *Set) Writes() string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	w := s.writes.String()
-	s.writes.Reset()
+	n, size := 0, 0
+	for n < len(s.writes) && (n == 0 || size+len(s.writes[n]) <= writeMost) {
+		size += len(s.writes[n])
+		n++
+	}
+	w := strings.Join(s.writes[:n], "")
+	s.writes = slices.Delete(s.writes, 0, n) // letting go of what went
+	more := len(s.writes) > 0
+	s.mu.Unlock()
+	if more {
+		s.land()
+	}
 	return w
+}
+
+func (s *Set) land() {
+	select {
+	case s.landed <- struct{}{}:
+	default:
+	}
 }
 
 func (s *Set) make(k key) {
@@ -154,12 +184,11 @@ func (s *Set) make(k key) {
 	}
 	s.made.Put(k, p, 1)
 	s.made.Evict(nil)
-	s.writes.WriteString(seq)
-	s.mu.Unlock()
-	select {
-	case s.landed <- struct{}{}:
-	default:
+	if seq != "" {
+		s.writes = append(s.writes, seq)
 	}
+	s.mu.Unlock()
+	s.land()
 }
 
 // draw makes k's picture and the escape sequence that sends it.
