@@ -43,11 +43,11 @@ func TestE2EFilesInAndOut(t *testing.T) {
 		t.Fatalf("the box kept %q", string(d.m.input))
 	}
 
-	// The message is the newest: s saves it, twice over to see the clash,
+	// The message is the newest: D saves it, twice over to see the clash,
 	// and O opens it.
 	d.press(esc)
 	for range 2 {
-		d.press(r('s'))
+		d.press(r('D'))
 	}
 	d.until("both saves", func() bool {
 		_, err := os.Stat(filepath.Join(home, "Downloads", "notes (1).txt"))
