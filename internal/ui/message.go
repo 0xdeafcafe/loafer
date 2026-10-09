@@ -123,7 +123,7 @@ func renderMessage(p *Palette, v store.View, m *slack.Message, w int, header boo
 		if m.LatestReply != "" {
 			t += " · last " + clock(tsTime(m.LatestReply), now)
 		}
-		body = append(body, canvas.Row{canvas.T("↩ "+t, p.Blue)})
+		body = append(body, append(canvas.Row{canvas.T("↩ "+t, p.Blue)}, repliers(p, v, m.ReplyUsers)...))
 	}
 
 	for i, r := range body {
@@ -163,11 +163,14 @@ func reactionRow(p *Palette, v store.View, rs []slack.Reaction) canvas.Row {
 		if slices.Contains(x.Users, v.Self()) {
 			chip, count = p.Ask, p.Ask.Fg(p.Orange.FG).With(canvas.Bold) // yours stand out
 		}
-		glyph := chip
+		glyph := canvas.Row{canvas.T(" "+e+" ", chip)}
 		if !std {
-			glyph = chip.Fg(p.Main.Dim.FG)
+			glyph = canvas.Row{canvas.T(" "+e+" ", chip.Fg(p.Main.Dim.FG))}
+			if pic, ok := inlinePic(v.Emoji(x.Name)); ok {
+				glyph = canvas.Row{canvas.T(" ", chip), pic, canvas.T(" ", chip)}
+			}
 		}
-		r = append(r, canvas.T(" "+e+" ", glyph), canvas.T(strconv.Itoa(x.Count)+" ", count))
+		r = append(append(r, glyph...), canvas.T(strconv.Itoa(x.Count)+" ", count))
 	}
 	return r
 }

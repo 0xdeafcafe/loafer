@@ -12,7 +12,8 @@ import (
 // Emoji in the UI: shortcodes drawn as characters, and finding them by
 // name, for the reaction picker (react.go) and the composer's :sm
 // completion, which is a trigger of complete.go's popup. Custom workspace
-// emoji stay as :name: until the images lane draws them.
+// emoji are pictures where the terminal draws them (picture.go), else
+// :name: in dim.
 
 // emojiUI is everything emoji keeps on the model.
 type emojiUI struct {

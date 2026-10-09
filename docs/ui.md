@@ -143,12 +143,14 @@ Notes:
   - Sections use rush's section rule `▾ name ──────`, with the section's emoji when the user gave it one. Collapsed sections with unreads show a count; quiet collapsed sections fold into one `▸ Social · Product · 3 more` line.
   - Rows: unread names are bright and bold, read ones plain sub, muted ones faint. On the right, the unread count is dim, and mentions are `@2` in yellow bold.
   - `↓ 4 more unread` and `↑ …` at the edges are Slack's "More unread messages" pills, drawn as rush's `↓ N more` chip.
-- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line.
+- **Avatars**: where the terminal draws pictures (kitty, Ghostty), a picture 2 cells wide on the name's row. Elsewhere, and until the picture lands, initials on a 2×2 chip tinted from the user's id, beside the name and first line. One that couldn't be fetched is tried once more when it's next drawn, a minute or more on. The pictures on disk are kept under 64 MB, the oldest going when loafer starts.
 - **Pane header**: rush's chrome-filled block. It shows the channel, its topic dim, members `⊙ 4`, saved `◆`, and search `⌕`. One tab row, with the active tab underlined in orange.
 - **Messages**:
   - **Header.** An avatar (a 2×1 kitty picture, or initials on a 2×2 tinted chip), then the bold name, `app` as a dim chip, and the time dim. Consecutive messages from the same author within 5 minutes drop the header, and their time shows only when selected.
   - **Day dividers** are a dim label centred on nothing, Slack's pill without the pill. The current day sticks to the top as a chrome chip.
   - **The "new" line** is a full-width orange rule with `new` at the right.
+  - **The newer pill**: scrolled up, or left back in time by a search, a chip sits centred on the list's last row, `↓ 3 new messages  G` (what's come since you last read it, not counting yours), or `↓ newer messages` where that can't be told. The key is `G` in the messages and `ctrl+end` elsewhere.
+  - **Read** is marked as you watch it come in: at the newest, in a focused terminal. A loafer in the background reads nothing until it has focus again.
   - **Attachments and blocks** sit behind a `▌` in their colour. Fields lay out in two columns when there's room. The footer is dim with ` · `. Long bodies fold at 8 rows to `⋯ show more`, in blue.
   - **Code blocks** are a `panelBG` fill, indented, highlighted with rush's highlighter. Inline code is cText on the chip fill.
   - **Selected message**: `selBG` fill plus the orange `▍`, like any row. Its actions are in the hint line and the `.` menu, rather than a hover toolbar.
@@ -183,8 +185,9 @@ Notes:
                                             │ ╰ ctrl+b also send to channel ──────────────────╯
 ```
 
-- The thread is rush's side pane: rush's `sideWidth()` rule (28% of the width, at least 30 columns, at most 64). Under 100 columns it replaces the channel, and esc comes back. Not yet: resizing by dragging the `│`.
-- Thread summaries under a message: `↩ 4 replies · last 16:47` in blue. Not yet: the repliers' avatars as tiny 1-cell images, or their initials.
+- The thread is rush's side pane: rush's `sideWidth()` rule (28% of the width, at least 30 columns, at most 64). Under 100 columns it replaces the channel, and esc comes back; any key that goes to the channel (`←`, `i` in the sidebar) closes it first, so focus is never on what's hidden. The mouse wheel scrolls whichever the pointer's over. Not yet: resizing by dragging the `│`.
+- Thread summaries under a message: `↩ 4 replies · last 16:47` in blue, then the first few repliers' avatars as 1-cell pictures where the terminal draws them.
+- After the socket drops, the thread looked at last is fetched again, as the conversation is.
 - For now the parent's own `↩ 4 replies` line stands where the "N replies" section rule goes.
 - Replies arrive live, as do edits, deletes and reactions in the thread, and it's marked read (`subscriptions.thread.mark`) as its newest reply shows.
 
@@ -442,6 +445,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
+| `ctrl+end` | the open conversation's newest message, reading it (outside the thread, where it's the thread's newest) |
 
 **Sidebar**: `↑↓` or `j k`, `pgup pgdn` by ten, `g G` first and last, `n` next unread, `enter` opens it and puts you in the composer, `q` quits.
 
@@ -481,7 +485,7 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 On a message with files, `D` saves them to `~/Downloads` and `O` saves and opens them. Neither holds the file in memory.
 
-**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji stay as `:name:` in dim until images draw them. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
+**Emoji**: `:name:` in a message is drawn as the character, with aliases (`:thumbsup:`) and skin tones (`:+1::skin-tone-3:`) as Slack has them. Your workspace's custom emoji are 2-cell pictures where the terminal draws them, in text and reactions alike, and `:name:` in dim elsewhere or until they land. In the composer, `:` after a space and two letters opens the same list as mentions (`:sm` offers `:smile:`, `:smirk:`...), and `tab` or `enter` completes it. The picker puts what you've reacted with this session first, then Slack's usual dozen; that isn't kept between runs.
 
 **Search**: a box over the screen, as ctrl+k's is. What's typed goes to Slack a quarter second after you stop, with Slack's modifiers as you type them (`in:#dev`, `from:@drew`, `before:2026-10-01`, `after:`, `is:thread`, `-word`), shown in blue. Opened from a conversation with nothing typed, it searches only there, as Slack's ⌘F does; `tab` switches between there and everywhere. Each result is its conversation, who and when, and a line or two with the matched words in orange (Slack's own marks, else the words you typed); replies say `↩ in a thread`. `↑↓` choose, `pgup pgdn` by five, and nearing the end fetches the next page. `enter` goes there with the cursor on it: at once if it's held, else after fetching the messages around it. A reply puts the cursor on its thread's parent and opens the thread with the cursor on the reply. Going past the newest from there (`↓`, `G`, `esc`) or sending fetches the newest again. `esc` closes it, and it opens again as it was left.
 
