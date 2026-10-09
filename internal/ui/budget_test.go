@@ -17,6 +17,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/0xdeafcafe/loafer/internal/obs"
+	"github.com/0xdeafcafe/loafer/internal/slack"
 	"github.com/0xdeafcafe/loafer/internal/slacktest"
 	"github.com/0xdeafcafe/loafer/internal/store"
 )
@@ -194,9 +195,49 @@ func bigRig(b *testing.B) *rig {
 	return r
 }
 
+// cpu reports the process's CPU time an op beside the wall time, which
+// a busy machine stretches.
+func cpu(b *testing.B) func() {
+	at := cpuTime()
+	return func() { b.ReportMetric(float64(cpuTime()-at)/float64(b.N), "cpu-ns/op") }
+}
+
+// A frame over nothing new.
 func BenchmarkBigFrame(b *testing.B) {
 	r := bigRig(b)
+	defer cpu(b)()
 	for b.Loop() {
+		r.m.View()
+	}
+}
+
+// A message lands somewhere else, a DM, which reorders the sidebar, and
+// a frame shows it.
+func BenchmarkBigStoreFrame(b *testing.B) {
+	r := bigRig(b)
+	defer cpu(b)()
+	i := 0
+	for b.Loop() {
+		i++
+		r.m.st.Apply(slack.Event{Type: "message", Raw: fmt.Appendf(nil, `{"type":"message","channel":"DB%04d","user":"UB00042","text":"on it","ts":"%d.000100"}`, i%slacktest.BigDMs, 2000000000+i)})
+		r.m.View()
+	}
+}
+
+// A message lands in #firehose, open with a couple of thousand held.
+func BenchmarkBigLiveFrame(b *testing.B) {
+	r := bigRig(b)
+	for range 20 {
+		if err := r.m.st.Older(r.ctx, r.m.api, slacktest.Big); err != nil {
+			b.Fatal(err)
+		}
+	}
+	r.m.View()
+	defer cpu(b)()
+	i := 0
+	for b.Loop() {
+		i++
+		r.m.st.Apply(slack.Event{Type: "message", Raw: fmt.Appendf(nil, `{"type":"message","channel":%q,"user":"UB00042","text":"on it","ts":"%d.000100"}`, slacktest.Big, 2000000000+i)})
 		r.m.View()
 	}
 }
@@ -204,6 +245,7 @@ func BenchmarkBigFrame(b *testing.B) {
 func BenchmarkBigJumpKey(b *testing.B) {
 	r := bigRig(b)
 	r.m.openJump()
+	defer cpu(b)()
 	for b.Loop() {
 		r.m.jumpKey(tea.KeyPressMsg{Code: 'e', Text: "e"})
 		r.m.jumpKey(tea.KeyPressMsg{Code: tea.KeyBackspace})
@@ -211,18 +253,16 @@ func BenchmarkBigJumpKey(b *testing.B) {
 }
 
 func BenchmarkBigMention(b *testing.B) {
-	r := bigRig(b)
-	r.m.setFocus(onCompose)
-	r.m.insert("@ad")
-	for b.Loop() {
-		r.m.refreshPop()
-	}
-}
-
-func BenchmarkBigSidebar(b *testing.B) {
-	r := bigRig(b)
-	for b.Loop() {
-		r.m.st.Read(r.m.buildSide)
+	for _, q := range []string{"@", "@ad"} {
+		b.Run(q, func(b *testing.B) {
+			r := bigRig(b)
+			r.m.setFocus(onCompose)
+			r.m.insert(q)
+			defer cpu(b)()
+			for b.Loop() {
+				r.m.refreshPop()
+			}
+		})
 	}
 }
 
