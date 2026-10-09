@@ -32,6 +32,9 @@ type Store struct {
 	windows  map[string]*Window
 	clock    uint64
 	names    uint64 // goes up when people or emoji change, which drawn messages show
+	link     string // the websocket: connecting, live or offline; "" before it's tried
+
+	booted atomic.Bool // a boot has got through
 
 	version atomic.Uint64
 	changed chan struct{}

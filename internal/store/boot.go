@@ -59,6 +59,9 @@ func (s *Store) Boot(ctx context.Context, c *slack.Client) error {
 		may("sections", err)
 	})
 	wg.Wait()
+	if len(errs) == 0 {
+		s.booted.Store(true)
+	}
 	slog.Info("boot", "ms", time.Since(began).Milliseconds(), "ok", len(errs) == 0)
 	return errors.Join(errs...)
 }

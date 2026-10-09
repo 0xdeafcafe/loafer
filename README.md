@@ -14,8 +14,8 @@ go install github.com/0xdeafcafe/loafer/cmd/loafer@latest
 needs go 1.27.1 or newer, and macos for now (sign-ins live in the keychain).
 
 ```sh
-loafer login      # sign in with your slack session
-loafer            # open it
+loafer            # open it, signing in first if it needs to
+loafer login      # sign in again, or to another workspace
 loafer app init   # loafer's own slack app, for phone pushes and shortcuts
 loafer report     # zip the logs and latest profile for a bug report
 ```
@@ -32,8 +32,9 @@ it doesn't go looking for them itself. reading another app's cookies is the sort
 - **conversations**: slack's mrkdwn and markdown both, so bots' headings, lists and tables come out as they meant them, and ```go blocks are highlighted (rush's highlighter, 15 or so languages). then attachments, reactions, threads' reply counts and a line where you'd read up to. drawn from the cache first, so it opens before slack has answered.
 - **keys for everything**: `ctrl+k` jumps anywhere, `ctrl+n` goes to whatever needs you, `alt+←` goes back, and there's a cursor over the messages for editing, binning, copying and opening links. the full list is in [docs/ui.md](docs/ui.md#keys).
 - **drafts** stay with their conversation, and `↑` in an empty box edits your last message, as slack does.
+- **live**: messages, edits, deletes, reactions and read state arrive over the same websocket the desktop app uses, and it catches up on what it missed when it drops.
 
-on the way, in this order: live updates over the websocket, threads, block kit buttons and modals, images, dms, activity, later, search and notifications. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
+on the way, in this order: threads, block kit buttons and modals, images, dms, activity, later, search and notifications. then a claude pane, which needs [rush](https://github.com/0xdeafcafe/rush) since it's your ai doing the work.
 
 ## when it goes wrong
 

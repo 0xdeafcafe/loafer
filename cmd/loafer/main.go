@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -87,20 +86,37 @@ func main() {
 	exitIf(run())
 }
 
-// run opens the default workspace: drawn from the cache at once, then
-// booted against Slack behind it.
+// run opens the default workspace, signing in first when there's no
+// sign-in to open or Slack has stopped taking it.
 func run() error {
-	ws, err := slack.Workspaces()
-	if err != nil {
-		return err
+	for {
+		ws, err := slack.Workspaces()
+		if err != nil {
+			return err
+		}
+		why := "not signed in yet."
+		if len(ws) > 0 {
+			creds, err := slack.Load(ws[0].TeamID)
+			if err == nil {
+				out, err := open(creds)
+				if !out {
+					return err
+				}
+				why = fmt.Sprintf("slack signed you out of %s.", creds.Team)
+			} else {
+				why = fmt.Sprintf("couldn't read %s's sign-in (%v).", ws[0].Team, err)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "%s sign in again, or ctrl+c to stop.\n\n", why)
+		if err := login(); err != nil {
+			return err
+		}
 	}
-	if len(ws) == 0 {
-		return errors.New("not signed in yet: run loafer login")
-	}
-	creds, err := slack.Load(ws[0].TeamID)
-	if err != nil {
-		return fmt.Errorf("reading %s's sign-in: %w", ws[0].Team, err)
-	}
+}
+
+// open draws creds' workspace from the cache at once, then boots it
+// against Slack behind it, and says whether Slack signed it out.
+func open(creds slack.Creds) (bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	st := store.New()
 	path := store.CachePath(creds.TeamID)
@@ -109,10 +125,11 @@ func run() error {
 	}
 	saved := make(chan struct{})
 	go func() { st.WriteBehind(ctx, path); close(saved) }()
-	_, err = tea.NewProgram(ui.New(ctx, st, slack.New(creds))).Run()
+	m := ui.New(ctx, st, slack.New(creds))
+	_, err := tea.NewProgram(m).Run()
 	cancel()
 	<-saved
-	return err
+	return err == nil && m.SignedOut(), err
 }
 
 func exitIf(err error) {
