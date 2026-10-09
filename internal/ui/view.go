@@ -64,6 +64,9 @@ func (m *Model) render() []canvas.Row {
 		if m.emo.pick.on {
 			out = m.overlayReact(out)
 		}
+		if m.find.on {
+			out = m.overlaySearch(v, out)
+		}
 	})
 	return out
 }

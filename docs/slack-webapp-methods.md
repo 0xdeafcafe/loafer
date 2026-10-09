@@ -161,6 +161,15 @@ search.inline: `{search_session_id,client_req_id,max_ts,min_ts,channel,user,coun
 Channel browse search: `{search_channel_types:["exclude_archived","org_wide"],sort,sort_dir,limit:20,query,cursor,team_ids}`.
 Filter syntax lives in the query string: `from:`, `in:`, `type:`, `creator:`, `is:thread`, plus `before:/after:` (the `is:thread` toggle exists; others by convention).
 
+What loafer uses (UNTESTED against a live workspace): the public `search.messages` with `query`, `page` (from 1), `count=20`,
+`highlight=true`, which takes a session token. Read: `messages.total`, `messages.matches[]` (`channel{id,name,is_im,is_mpim}`, `user`,
+`username`, `ts`, `text`, `permalink`), and the page from `messages.paging{page,pages}` or, failing that, `messages.pagination{page,page_count}`.
+Assumed: highlight marks are U+E000 / U+E001 round each match (the UI lights the query's words itself when they're absent); a reply's
+parent is `thread_ts` on the match or, when that's missing, the permalink's `?thread_ts=`; `in:<#C123>` narrows to a conversation
+(unchecked for DMs, where the UI may need `in:<@U123>`). `cursor` paging (`*`, then `next_cursor`) is documented too but not used.
+Going to a result outside the held window: `conversations.history` with `latest=<ts>&inclusive=true&limit=50` for what's before it,
+then `oldest=<ts>&inclusive=true&limit=50`; Slack fills a page from the newest end, so that second page is only kept when `has_more` is false.
+
 ## 8. Boot, counts, DMs, websocket
 
 FOUND: `client.userBoot`, `client.channels`, `client.dms`, `client.extras`, `client.counts`, `client.init`, `client.gantryBoot`,

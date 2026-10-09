@@ -225,7 +225,7 @@ func (s *Store) Add(conv string, m slack.Message) {
 			}
 			return
 		}
-		if w := s.windows[conv]; w != nil {
+		if w := s.windows[conv]; w != nil && !w.Newer { // a window back in time doesn't reach it
 			i, found := slices.BinarySearchFunc(w.Msgs, m.TS, func(x slack.Message, ts string) int { return strings.Compare(x.TS, ts) })
 			if found {
 				w.Msgs[i] = m
