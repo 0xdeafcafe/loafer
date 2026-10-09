@@ -49,6 +49,7 @@ type Server struct {
 	files    map[string]*file
 	out      bool                     // signed out: every call is invalid_auth and the socket won't open
 	holds    map[string]chan struct{} // methods whose answers wait (hold.go)
+	outside  []slack.User             // people users.info knows and users.list doesn't (Stranger)
 }
 
 type conv struct {
