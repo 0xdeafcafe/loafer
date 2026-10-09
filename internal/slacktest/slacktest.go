@@ -258,7 +258,9 @@ func (s *Server) serve(method string, f url.Values) (map[string]any, string) {
 			if c.IsIM {
 				ims = append(ims, c.wire())
 			} else if c.IsMember { // boot lists only the channels you're in
-				chans = append(chans, c.wire())
+				w := c.wire()
+				w.IsMember = false // and, as Slack's does, without is_member
+				chans = append(chans, w)
 			}
 		}
 		return map[string]any{"self": self, "team": s.team, "channels": chans, "ims": ims, "prefs": s.prefs}, ""

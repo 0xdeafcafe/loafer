@@ -94,10 +94,12 @@ func (s *Store) ApplyBoot(b slack.UserBoot) {
 		p := person(b.Self)
 		s.people[p.ID] = &p
 		s.al.prefs.Load(b.Prefs, b.DND)
-		for _, list := range [][]slack.Conversation{b.Channels, b.IMs} {
-			for _, c := range list {
-				s.putConv(c)
-			}
+		for _, c := range b.Channels {
+			c.IsMember = true // boot lists only yours, and says so by leaving is_member out
+			s.putConv(c)
+		}
+		for _, c := range b.IMs {
+			s.putConv(c)
 		}
 	})
 }
