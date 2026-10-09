@@ -25,6 +25,7 @@ var version = "dev"
 func main() {
 	trace := flag.String("trace", "", "log full payloads for these kinds: api,ws,render,store or all")
 	pprofAddr := flag.String("pprof", "", "serve net/http/pprof on this address, e.g. localhost:6061")
+	demoMode := flag.Bool("demo", false, "open a made-up workspace, with no sign-in, to try loafer")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: loafer [flags] [command]\n\ncommands:\n  login     sign in to a workspace with your Slack session\n  app init  set up loafer's own Slack app (phone pushes, shortcuts)\n  report    zip logs and the latest profile for a bug report\n  version   print the version\n\nflags:\n")
 		flag.PrintDefaults()
@@ -82,6 +83,10 @@ func main() {
 	defer stop()
 	if *pprofAddr != "" {
 		obs.Serve(*pprofAddr)
+	}
+	if *demoMode {
+		exitIf(demo())
+		return
 	}
 	exitIf(run())
 }
