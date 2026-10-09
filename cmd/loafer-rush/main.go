@@ -9,10 +9,8 @@
 // Keychain item, and `loafer draft`, which hands a draft to the running
 // loafer.
 //
-//	mkdir -p ~/.config/rush/plugins/loafer
-//	go build -o ~/.config/rush/plugins/loafer/loafer-rush ./cmd/loafer-rush
-//	cp cmd/loafer-rush/plugin.json ~/.config/rush/plugins/loafer/
-//	rush plugin approve loafer
+//	go install ./cmd/loafer ./cmd/loafer-rush
+//	loafer rush install
 package main
 
 import (

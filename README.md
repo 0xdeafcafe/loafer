@@ -20,6 +20,7 @@ loafer login      # sign in again, or to another workspace
 loafer app init   # loafer's own slack app, for phone pushes and shortcuts
 loafer notifyd install   # notifications while it's closed (uninstall, status)
 loafer report     # zip the logs and latest profile for a bug report
+loafer rush install   # give rush's agents slack (it offers this once, if rush is here)
 ```
 
 ## signing in
