@@ -506,6 +506,8 @@ The connection state lives in header row 1:
 
 It's shown with the terminal's own escape where loafer knows it (OSC 9 for iTerm2 and WezTerm, OSC 777 for Ghostty, kitty's own for kitty), else through `osascript`; under tmux it's always `osascript`. The title is `#channel` or the person, the body is the message as plain text, and a burst is shown as one `N new messages` note every 3 s. loafer asks the terminal for focus events: in one that doesn't send them (tmux without `focus-events on`), the open conversation never notifies.
 
+**While it's closed.** `loafer notifyd install` writes a LaunchAgent (`~/Library/LaunchAgents/com.github.0xdeafcafe.loafer.notifyd.plist`) and loads it; again, it reloads or restarts it, so a new build takes over. `uninstall` unloads and removes it. `status` says whether launchd has it, and who has the websocket: notifyd, the TUI (notifyd parked), or nobody. notifyd holds the default workspace's websocket with the same rules and the same 3 s bursts, shown through `osascript` only, since it has no terminal. Nothing is ever in front of you, so focus doesn't count. Opening loafer takes the websocket over (notifyd parks it first) and closing it hands it back. Signed out, notifyd says `loafer was signed out; run loafer` once and waits for loafer to have been opened and closed before trying again. Clicking a notification does nothing yet. Its log is `~/Library/Logs/loafer/notifyd.jsonl`.
+
 ## Sizes
 
 - **Under 100 columns**: the sidebar collapses to icons and counts (`# 2`, `⊡`), and Enter opens a full-width list.
