@@ -227,7 +227,7 @@ func (m *Model) threadKey(k tea.KeyPressMsg, s string) tea.Cmd {
 			m.refreshPop()
 		}
 	})
-	if m.focus == onSide { // ← from the thread is the conversation
+	if m.focus == onSide && m.tabs.on != tabClaude { // ← from the thread is the conversation
 		m.setFocus(onMsgs)
 	}
 	return cmd
@@ -285,7 +285,7 @@ func (m *Model) threaded(msg threadMsg) tea.Cmd {
 // panes is the conversation, and the thread beside it when it's open.
 func (m *Model) panes(v store.View, w, h int) []canvas.Row {
 	switch {
-	case m.th.ts == "":
+	case m.th.ts == "" || m.tabs.on == tabClaude:
 		return m.main(v, w, h)
 	case m.narrow():
 		return m.thread(v, w, h)

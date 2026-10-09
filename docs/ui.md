@@ -408,7 +408,7 @@ Due times are dim, `due today` is yellow, and `overdue` is red and bold. `enter`
               ◇ draft replies to my unanswered DMs
 ```
 
-Once a conversation starts, it uses rush's conversation look (`▏` spine, folded steps, `✓`/`✗`), streamed from the plugin's `sessions.subscribe`. Without rush, the tab says `Claude needs rush · ? how to set it up` in dim.
+Once a conversation starts, it uses rush's conversation look (`▏` spine, folded steps, `✓`/`✗`), streamed from `rush session watch`. Without rush, the tab says `Claude needs rush · go install github.com/0xdeafcafe/rush/cmd/rush@latest` in dim.
 
 ## Rich text
 
@@ -438,6 +438,7 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `alt+shift+↑` `alt+shift+↓` | the unread conversation above or below |
 | `alt+←` `alt+→` | back and forward through the conversations you've visited |
 | `alt+1` … `alt+5` | the tabs: Home, DMs, Activity, Later, Claude. A tab's list is fetched the first time it opens |
+| `alt+c` | the Claude tab, with the open conversation attached |
 | `tab` `shift+tab` | sidebar, messages, composer, and the thread's messages and box when it's open |
 | `f12` | the debug strip |
 | `ctrl+alt+p` | profile for 35 s into the logs folder |
@@ -464,7 +465,8 @@ You should never need the mouse. Keys follow rush where rush has one (ctrl+k, ct
 | `esc` | drop the cursor and go to the newest; again for the sidebar |
 | `t` | open its thread on the right, or start one |
 | `enter` `→` | open its thread, if it has one; else `enter` writes |
-| `i` `a` | write |
+| `a` | ask Claude about it: the Claude tab, with it and five messages either side attached |
+| `i` | write |
 
 **Composer**: `enter` sends, `shift+enter` (or `alt+enter`, `ctrl+j`) is a new line, `↑` in an empty box edits your last message, `esc` cancels an edit or goes to the messages, `ctrl+w` drops a word. A draft stays with its conversation when you go elsewhere.
 
@@ -476,7 +478,9 @@ Editing: `ctrl+a` `ctrl+e` (or `home` `end`) go to the start and end of the line
 
 **Search**: a box over the screen, as ctrl+k's is. What's typed goes to Slack a quarter second after you stop, with Slack's modifiers as you type them (`in:#dev`, `from:@drew`, `before:2026-10-01`, `after:`, `is:thread`, `-word`), shown in blue. Opened from a conversation with nothing typed, it searches only there, as Slack's ⌘F does; `tab` switches between there and everywhere. Each result is its conversation, who and when, and a line or two with the matched words in orange (Slack's own marks, else the words you typed); replies say `↩ in a thread`. `↑↓` choose, `pgup pgdn` by five, and nearing the end fetches the next page. `enter` goes there with the cursor on it: at once if it's held, else after fetching the messages around it. A reply puts the cursor on its thread's parent and opens the thread with the cursor on the reply. Going past the newest from there (`↓`, `G`, `esc`) or sending fetches the newest again. `esc` closes it, and it opens again as it was left.
 
-**Thread**: the pane is the conversation's list and box over again, so the cursor and its keys (`↑↓`, `e`, `r`, `d d`, `c` `l`, `o`) work there as they do in the conversation, over the parent and its replies. It opens with its box focused. `tab` and `shift+tab` come round to it after the conversation's box; `esc` in its messages closes it, back on the parent, and `←` goes to the conversation. In its box, `enter` replies, `ctrl+b` ticks "also send to the channel" (it unticks once sent), and `esc` cancels an edit or goes to its messages. What's written in a thread's box stays with that thread when it's closed. Opening another conversation closes it.
+**Thread**: the pane is the conversation's list and box over again, so the cursor and its keys (`↑↓`, `e`, `r`, `d d`, `c` `l`, `o`) work there as they do in the conversation, over the parent and its replies, and `a` asks Claude about the whole thread. It opens with its box focused. `tab` and `shift+tab` come round to it after the conversation's box; `esc` in its messages closes it, back on the parent, and `←` goes to the conversation. In its box, `enter` replies, `ctrl+b` ticks "also send to the channel" (it unticks once sent), and `esc` cancels an edit or goes to its messages. What's written in a thread's box stays with that thread when it's closed. Opening another conversation closes it.
+
+**Claude**: the box has the keys when the tab opens. With nothing asked yet, `↑↓` choose a starter (summarise, draft a reply, catch me up) and `enter` runs it; type and `enter` asks instead. `backspace` at the start of the box takes the last chip off. The answer streams in and has the keys once it's done: `i` puts it into its conversation's composer as a draft (after what's there, never sent), `↑↓` `pgup pgdn` scroll, and `enter` or typing goes back to the box. A follow-up goes to the same session; `alt+n` starts a new one, `ctrl+o` opens it in rush (`rush open <id> --hosted`, `ctrl+q` comes back), and `esc` goes from the box to the answer, then Home.
 
 Not yet: save for later (`s`), mark unread (`u`), the `.` menu, user rebinding (rush's keymap file) and rush's `ctrl+]` leader for terminals that eat alt.
 

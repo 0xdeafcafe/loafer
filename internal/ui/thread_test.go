@@ -131,4 +131,13 @@ func TestE2EThread(t *testing.T) {
 	if d.has("thread  # dev") || d.m.sel != parent {
 		t.Fatalf("esc esc should close it, back on the parent:\n%s", d.text)
 	}
+
+	// a in the thread asks Claude about the whole of it.
+	d.m.claude.link = &fakeRush{}
+	d.press(tea.KeyPressMsg{Code: tea.KeyEnter})
+	d.until("the thread again", func() bool { return d.has("on it") })
+	d.press(esc, r('a'))
+	if c := d.m.claude; d.m.tabs.on != tabClaude || len(c.srcs) != 1 || !strings.Contains(c.srcs[0].what, "thread in") || !strings.Contains(c.srcs[0].what, "5 replies") {
+		t.Fatalf("tab %v chips %v", d.m.tabs.on, c.labels())
+	}
 }
