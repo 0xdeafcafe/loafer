@@ -77,7 +77,224 @@ func nineOn(t time.Time) time.Time {
 	return time.Date(y, mo, d, 9, 0, 0, 0, t.Location())
 }
 
-// actKey is `.`, or one of the keys that only the menu had: u s P m.
+// --- every action ---
+
+// scope is what an action is done to, which is how it's run.
+type scope uint8
+
+const (
+	anywhere  scope = iota // its key, pressed
+	onSidebar              // a sidebar manage key, needing nothing
+	onConv                 // a sidebar manage key, on the current conversation
+	onMessage              // do, on the current message
+)
+
+// action is something loafer does, with the key that does it. allActions
+// is the one list: the `.` menu is its message actions, and ctrl+k's `>`
+// is all of it. when, if set, is its label as things stand, or "" where it
+// doesn't apply.
+type action struct {
+	key, glyph, label string
+	on                scope
+	danger            bool
+	when              func(m *Model, v store.View, mn *menu) string
+}
+
+var allActions = []action{
+	// The message's: the `.` menu, in its order.
+	{key: "r", glyph: "☺", label: "react", on: onMessage},
+	{key: "t", glyph: "↩", label: "reply in thread", on: onMessage, when: notInThread("reply in thread")},
+	{key: "a", glyph: "◇", label: "ask Claude", on: onMessage},
+	{key: "s", glyph: "◆", label: "save for later", on: onMessage, when: func(_ *Model, v store.View, mn *menu) string {
+		if v.IsSaved(mn.conv, mn.msg.TS) {
+			return "remove from later"
+		}
+		return "save for later"
+	}},
+	{key: "m", glyph: "◷", label: "remind me ▸", on: onMessage},
+	{key: "P", glyph: "⚑", label: "pin", on: onMessage, when: func(_ *Model, _ store.View, mn *menu) string {
+		if slices.Contains(mn.msg.PinnedTo, mn.conv) {
+			return "unpin"
+		}
+		return "pin"
+	}},
+	{key: "u", glyph: "●", label: "mark unread from here", on: onMessage, when: notInThread("mark unread from here")},
+	{key: "l", glyph: "⧉", label: "copy link", on: onMessage},
+	{key: "c", glyph: "⧉", label: "copy text", on: onMessage},
+	{key: "o", glyph: "↗", label: "open link", on: onMessage, when: func(_ *Model, _ store.View, mn *menu) string { return pick(mn.link, "open link") }},
+	{key: "L", glyph: "↗", label: "open in Slack", on: onMessage},
+	{key: "D", glyph: "▤", label: "download files", on: onMessage, when: hasFiles("download files")},
+	{key: "O", glyph: "▤", label: "download and open files", on: onMessage, when: hasFiles("download and open files")},
+	{key: "p", glyph: "◉", label: "profile", on: onMessage},
+	{key: "e", glyph: "✎", label: "edit", on: onMessage, when: own("edit")},
+	{key: "d", glyph: "✗", label: "delete", on: onMessage, danger: true, when: own("delete")},
+
+	// The conversation's: the sidebar's manage keys (manage.go).
+	{key: "z", glyph: "▾", label: "fold its section", on: onConv},
+	{key: "m", glyph: "◌", label: "mute", on: onConv, when: func(_ *Model, v store.View, mn *menu) string {
+		if c := v.Conv(mn.conv); c != nil && c.Muted {
+			return "unmute"
+		}
+		return "mute"
+	}},
+	{key: "*", glyph: "☆", label: "star or unstar", on: onConv},
+	{key: "s", glyph: "▸", label: "move to a section", on: onConv},
+	{key: "x", glyph: "✗", label: "leave", on: onConv, when: func(_ *Model, v store.View, mn *menu) string {
+		if c := v.Conv(mn.conv); c != nil && (c.Kind == store.IM || c.Kind == store.MPIM) {
+			return "close"
+		}
+		return "leave"
+	}},
+	{key: "b", glyph: "#", label: "browse channels", on: onSidebar},
+	{key: "N", glyph: "●", label: "new message", on: onSidebar},
+
+	// Anywhere (model.go's key, workspaces.go's alt+w).
+	{key: "ctrl+n", glyph: "◆", label: "next that needs you"},
+	{key: "alt+shift+down", glyph: "●", label: "next unread"},
+	{key: "alt+left", glyph: "←", label: "back"},
+	{key: "alt+right", glyph: "→", label: "forward"},
+	{key: "ctrl+end", glyph: "↓", label: "newest message"},
+	{key: "ctrl+f", glyph: "⌕", label: "search messages"},
+	{key: "alt+1", glyph: "▣", label: "Home"},
+	{key: "alt+2", glyph: "▣", label: "DMs"},
+	{key: "alt+3", glyph: "▣", label: "Activity"},
+	{key: "alt+4", glyph: "▣", label: "Later"},
+	{key: "alt+5", glyph: "◇", label: "Claude"},
+	{key: "alt+c", glyph: "◇", label: "ask Claude about this conversation"},
+	{key: "alt+w", glyph: "⇄", label: "switch workspace", when: func(m *Model, _ store.View, _ *menu) string {
+		return pick(m.ws != nil && len(m.ws.x.ws) > 1, "switch workspace")
+	}},
+	{key: "f12", glyph: "▤", label: "debug strip"},
+	{key: "ctrl+alt+p", glyph: "◷", label: "profile loafer for 35s"},
+	{key: "ctrl+c", glyph: "✗", label: "quit"},
+}
+
+func pick(ok bool, label string) string {
+	if ok {
+		return label
+	}
+	return ""
+}
+
+func notInThread(label string) func(*Model, store.View, *menu) string {
+	return func(_ *Model, _ store.View, mn *menu) string { return pick(!mn.thread, label) }
+}
+
+func hasFiles(label string) func(*Model, store.View, *menu) string {
+	return func(_ *Model, _ store.View, mn *menu) string { return pick(len(downloadable(mn.msg.Files)) > 0, label) }
+}
+
+func own(label string) func(*Model, store.View, *menu) string {
+	return func(_ *Model, v store.View, mn *menu) string {
+		return pick(mn.msg.User == v.Self() && mn.msg.Subtype == "", label)
+	}
+}
+
+// actionItems is allActions of scope s as they stand for mn.
+func (m *Model) actionItems(v store.View, mn *menu, s scope) []menuItem {
+	var out []menuItem
+	for _, a := range allActions {
+		if a.on != s {
+			continue
+		}
+		label := a.label
+		if a.when != nil {
+			if label = a.when(m, v, mn); label == "" {
+				continue
+			}
+		}
+		out = append(out, menuItem{key: a.key, glyph: a.glyph, label: label, danger: a.danger})
+	}
+	return out
+}
+
+// currentMsg is the message under the cursor, in the thread pane's if
+// that has the focus.
+func (m *Model) currentMsg() (msg slack.Message, ok, thread bool) {
+	if m.focus == onThread {
+		m.inThread(func() { msg, ok = m.selected() })
+		return msg, ok, true
+	}
+	msg, ok = m.selected()
+	return msg, ok, false
+}
+
+// currentConv is the conversation the sidebar's keys would act on: the
+// selected one there, else the open one.
+func (m *Model) currentConv() string {
+	if m.focus == onSide && m.tabs.on == tabHome {
+		return m.selConv()
+	}
+	return m.open
+}
+
+// runAction does a as its key would, on the current message or
+// conversation.
+func (m *Model) runAction(a action) tea.Cmd {
+	switch a.on {
+	case onMessage:
+		msg, ok, thread := m.currentMsg()
+		if !ok {
+			return m.say("pick a message first (↑)", false)
+		}
+		var cmd tea.Cmd
+		if thread {
+			m.inThread(func() { cmd = m.do(a.key, msg) })
+		} else {
+			cmd = m.do(a.key, msg)
+		}
+		return cmd
+	case onConv:
+		id := m.currentConv()
+		i := slices.IndexFunc(m.side, func(it sideItem) bool { return it.conv == id })
+		if id == "" || i < 0 {
+			return m.say("open a conversation first", false)
+		}
+		m.sideAt = i
+		fallthrough
+	case onSidebar:
+		cmd, _ := m.manageKey(a.key)
+		return cmd
+	}
+	k := keyPress(a.key)
+	return func() tea.Msg { return k } // as if pressed, so alt+w reaches the workspaces above
+}
+
+// keyPress is the key s names, as bubbletea writes them.
+func keyPress(s string) tea.KeyPressMsg {
+	var k tea.KeyPressMsg
+	parts := strings.Split(s, "+")
+	for _, p := range parts[:len(parts)-1] {
+		switch p {
+		case "ctrl":
+			k.Mod |= tea.ModCtrl
+		case "alt":
+			k.Mod |= tea.ModAlt
+		case "shift":
+			k.Mod |= tea.ModShift
+		}
+	}
+	switch last := parts[len(parts)-1]; last {
+	case "left":
+		k.Code = tea.KeyLeft
+	case "right":
+		k.Code = tea.KeyRight
+	case "down":
+		k.Code = tea.KeyDown
+	case "end":
+		k.Code = tea.KeyEnd
+	case "f12":
+		k.Code = tea.KeyF12
+	default:
+		k.Code = []rune(last)[0]
+		if k.Mod == 0 {
+			k.Text = last
+		}
+	}
+	return k
+}
+
+// actKey is `.`, or one of the keys that only the menu had: u s P m L.
 func (m *Model) actKey(s string) tea.Cmd {
 	msg, ok := m.selected()
 	if !ok {
@@ -111,6 +328,10 @@ func (m *Model) do(key string, msg slack.Message) tea.Cmd {
 		return m.markUnread(msg)
 	case "l":
 		return tea.Batch(tea.SetClipboard(m.permalink(msg)), m.say("copied a link to the message", false))
+	case "L":
+		return m.openURL(m.permalink(msg))
+	case "p":
+		return m.profile()
 	case "c":
 		return m.copyText(msg)
 	case "o":
@@ -314,7 +535,11 @@ func (m *Model) openLink(msg slack.Message) tea.Cmd {
 	if len(links) == 0 {
 		return m.say("no link in that one", false)
 	}
-	target := links[0]
+	return m.openURL(links[0])
+}
+
+// openURL opens target in the browser.
+func (m *Model) openURL(target string) tea.Cmd {
 	return tea.Batch(m.say("opening "+target, false), func() tea.Msg {
 		if err := exec.Command("open", target).Run(); err != nil {
 			slog.Warn("open link", "err", err)

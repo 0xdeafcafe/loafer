@@ -628,7 +628,7 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.save(s == "O")
 	case "a":
 		return m.claudeAbout()
-	case ".", "u", "s", "P", "m":
+	case ".", "u", "s", "P", "m", "L":
 		return m.actKey(s)
 	case "p":
 		return m.profile()
