@@ -142,7 +142,7 @@ func inlineLines(raw jsontext.Value) ([]Line, bool) {
 		case "channel":
 			add(Span{Kind: Channel, Mark: mark, Target: e.ChannelID})
 		case "usergroup":
-			// shortcut: the group's id, not its handle, until the store knows usergroups.
+			// The id stands in for the handle; the UI swaps in the store's (spanText).
 			add(Span{Kind: Group, Mark: mark, Target: e.UsergroupID, Text: "@" + e.UsergroupID})
 		case "broadcast":
 			add(Span{Kind: Special, Mark: mark, Target: e.Range, Text: "@" + e.Range})

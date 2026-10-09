@@ -66,6 +66,9 @@ func (m *Model) render() []canvas.Row {
 		if m.find.on {
 			out = m.overlaySearch(v, out)
 		}
+		if m.ppl.card.on {
+			out = m.overlayCard(v, out)
+		}
 	})
 	return out
 }
@@ -205,15 +208,12 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 		}
 		name = name.Bg(base.BG)
 	}
-	glyph := "#"
+	glyph, glyphFG := "#", ink.Dim.FG
 	switch c.Kind {
 	case store.Private:
 		glyph = "⊡"
 	case store.IM:
-		glyph = "●"
-		if v.Person(c.User).Bot {
-			glyph = "◇"
-		}
+		glyph, glyphFG = dmMark(v, c, ink, m.pal.SideGreen)
 	case store.MPIM:
 		glyph = "⁂"
 	}
@@ -224,7 +224,12 @@ func (m *Model) sideRow(v store.View, c *store.Conv, w int, selected, open bool)
 	if selected {
 		mark = canvas.T("▍", base.Fg(m.pal.Orange.FG))
 	}
-	left := canvas.Row{mark, canvas.T(" "+glyph+" ", name.With(0).Fg(ink.Dim.FG)), canvas.T(v.Title(c), name)}
+	left := canvas.Row{mark, canvas.T(" "+glyph+" ", name.With(0).Fg(glyphFG)), canvas.T(v.Title(c), name)}
+	if c.Kind == store.IM {
+		if g := statusGlyph(v, c.User); g != "" {
+			left = append(left, canvas.T(" "+g, name.With(0)))
+		}
+	}
 	var right canvas.Row
 	if c.Mentions > 0 {
 		right = canvas.Row{canvas.T("@"+strconv.Itoa(c.Mentions)+" ", m.pal.SideYellow.Bg(base.BG).With(canvas.Bold))}
@@ -257,6 +262,9 @@ func (m *Model) main(v store.View, w, h int) []canvas.Row {
 	title := canvas.Row{canvas.T(" ", m.pal.Panel), canvas.T(convLabel(v, c), m.pal.Panel.Fg(ink.Bright.FG).With(canvas.Bold))}
 	if c.Topic != "" {
 		title = append(title, canvas.T("   "+firstLine(c.Topic), m.pal.Panel.Fg(ink.Dim.FG)))
+	}
+	if c.Kind == store.IM {
+		title = m.dmTitle(v, c)
 	}
 	head := []canvas.Row{canvas.Fit(title, w, m.pal.Panel), canvas.Fit(nil, w, ink.Text)}
 
@@ -410,7 +418,7 @@ func (m *Model) hints(v store.View) canvas.Row {
 	case m.focus == onSide:
 		pairs = [][2]string{{"↑↓", "move"}, {"enter", "open"}, {"n", "next unread"}, {"alt+←→", "back fwd"}, {"tab", "messages"}, {"f12", "debug"}, {"q", "quit"}}
 	case m.focus == onMsgs && m.sel != "":
-		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
+		pairs = [][2]string{{"↑↓", "move"}, {"t", "thread"}, {"{}", "by author"}, {"n", "new"}, {"@", "mentions"}, {"e", "edit"}, {"r", "react"}, {"a", "ask Claude"}, {"p", "profile"}, {"dd", "delete"}, {"c l", "copy text, link"}, {"o", "open link"}, {"esc", "newest"}}
 	case m.focus == onMsgs:
 		pairs = [][2]string{{"↑", "pick a message"}, {"n", "new"}, {"@", "mentions"}, {"g", "oldest"}, {"i", "write"}, {"esc", "sidebar"}}
 	case m.editing != "":

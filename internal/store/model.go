@@ -1,6 +1,10 @@
 package store
 
-import "github.com/0xdeafcafe/loafer/internal/slack"
+import (
+	"cmp"
+
+	"github.com/0xdeafcafe/loafer/internal/slack"
+)
 
 // Kind is what sort of conversation a Conv is.
 type Kind uint8
@@ -36,6 +40,16 @@ type Person struct {
 	Avatar  string `json:"avatar,omitempty"` // 72px image URL
 	Bot     bool   `json:"bot,omitempty"`
 	Deleted bool   `json:"deleted,omitempty"`
+
+	// What the profile card and status emoji show (presence.go).
+	Real        string `json:"real,omitempty"` // real name
+	Title       string `json:"title,omitempty"`
+	Pronouns    string `json:"pronouns,omitempty"`
+	Email       string `json:"email,omitempty"`
+	TZ          string `json:"tz,omitempty"`
+	StatusEmoji string `json:"status_emoji,omitempty"` // ":palm_tree:"
+	StatusText  string `json:"status_text,omitempty"`
+	StatusUntil int64  `json:"status_until,omitempty"` // unix seconds, 0 for none
 }
 
 // Section is a sidebar section, with its conversations in order.
@@ -62,6 +76,9 @@ func person(u slack.User) Person {
 	p := Person{
 		ID: u.ID, Handle: u.Name, Color: u.Color, Avatar: u.Profile.Image72,
 		Bot: u.IsBot || u.IsApp, Deleted: u.Deleted,
+		Real: cmp.Or(u.Profile.RealName, u.RealName), Title: u.Profile.Title, Pronouns: u.Profile.Pronouns,
+		Email: u.Profile.Email, TZ: u.TZ,
+		StatusEmoji: u.Profile.StatusEmoji, StatusText: u.Profile.StatusText, StatusUntil: u.Profile.StatusUntil,
 	}
 	for _, n := range []string{u.Profile.DisplayName, u.Profile.RealName, u.RealName, u.Name} {
 		if n != "" {

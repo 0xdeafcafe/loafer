@@ -60,6 +60,7 @@ type Model struct {
 	find      finder   // ctrl+f
 	th        threadPane
 	tabs      tabState // DMs, Activity, Later and Claude (tabs.go)
+	ppl       peopleUI // presence, and the profile card (people.go)
 
 	input    []rune
 	ments    []mention // the runs of input that are mentions
@@ -247,6 +248,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd, ok := m.onPics(msg); ok {
 		return m, cmd
 	}
+	if cmd, ok := m.onProfile(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -262,6 +266,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.live = l
 			}
 		})
+		m.watchPeople()
 		cmd := tea.Batch(m.waitStore(), m.fetchTabs())
 		if m.open != "" && m.scroll == 0 {
 			cmd = tea.Batch(cmd, m.markRead()) // watching it come in is reading it
@@ -377,6 +382,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.find.on && s != "ctrl+c" && s != "f12" {
 		return m.searchKey(k)
+	}
+	if m.ppl.card.on && s != "ctrl+c" && s != "f12" {
+		return m.cardKey(k)
 	}
 	if m.focus == onCompose && m.pop.on && m.popKey(s) {
 		return nil
@@ -555,6 +563,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.threadAt(s)
 	case "a":
 		return m.claudeAbout()
+	case "p":
+		return m.profile()
 	case "i":
 		m.setFocus(onCompose)
 	}
