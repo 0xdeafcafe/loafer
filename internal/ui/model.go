@@ -54,6 +54,7 @@ type Model struct {
 	fetching  bool     // older messages are on their way
 	back, fwd []string // conversations visited, for alt+← and alt+→
 	bar       jumper   // ctrl+k
+	find      finder   // ctrl+f
 
 	input    []rune
 	cur      int
@@ -204,6 +205,9 @@ func (m *Model) send() tea.Cmd {
 		msg, err := m.api.Post(m.ctx, conv, text, "")
 		if err == nil {
 			m.st.Add(conv, msg) // before the websocket's copy, if it's slow
+			if err := m.st.Newest(m.ctx, m.api, conv); err != nil {
+				slog.Warn("newest", "conv", conv, "err", err) // left back where a search went
+			}
 		}
 		return sentMsg{err}
 	}
@@ -284,8 +288,10 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case olderMsg:
 		m.fetching = false
 		if msg.err != nil {
-			return m, m.say("couldn't fetch older messages: "+msg.err.Error(), true)
+			return m, m.say("couldn't fetch messages: "+msg.err.Error(), true)
 		}
+	case searchTickMsg, searchedMsg, foundMsg:
+		return m, m.searched(msg)
 	case flashOffMsg:
 		if time.Now().After(m.flashExpiry) {
 			m.flash = ""
@@ -299,6 +305,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.bar.on {
 			m.bar.query = append(m.bar.query, []rune(strings.ReplaceAll(msg.Content, "\n", " "))...)
 			m.st.Read(m.buildJump)
+		} else if m.find.on {
+			m.find.query = append(m.find.query, []rune(strings.ReplaceAll(msg.Content, "\n", " "))...)
+			return m, m.edited()
 		} else if m.focus == onCompose {
 			m.insert(msg.Content)
 		}
@@ -330,6 +339,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if m.bar.on && s != "ctrl+c" && s != "f12" {
 		return m.jumpKey(k)
+	}
+	if m.find.on && s != "ctrl+c" && s != "f12" {
+		return m.searchKey(k)
 	}
 	// Everywhere. ponytail: alt keys only; rush's ctrl+] leader for
 	// terminals that eat alt comes with the keymap file.
@@ -372,6 +384,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		m.openJump()
+		return nil
+	case "ctrl+f":
+		m.openSearch()
 		return nil
 	case "alt+left":
 		return m.goBack()
@@ -455,6 +470,8 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.toNew()
 	case "@":
 		return m.toMention()
+	case "/":
+		m.openSearch()
 	case "e", "c", "l", "o", "d", "delete":
 		msg, ok := m.selected()
 		if !ok {
@@ -473,8 +490,7 @@ func (m *Model) msgsKey(s string) tea.Cmd {
 		return m.openLink(msg)
 	case "esc", "left", "h":
 		if m.sel != "" {
-			m.sel, m.scroll = "", 0
-			return nil
+			return m.pick(newest)
 		}
 		m.setFocus(onSide)
 	case "i", "a", "enter":

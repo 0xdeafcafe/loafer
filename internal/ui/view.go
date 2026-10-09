@@ -60,6 +60,9 @@ func (m *Model) render() []canvas.Row {
 		if m.bar.on {
 			out = m.overlayJump(v, out)
 		}
+		if m.find.on {
+			out = m.overlaySearch(v, out)
+		}
 	})
 	return out
 }

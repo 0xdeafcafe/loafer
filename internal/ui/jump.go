@@ -122,6 +122,9 @@ func (m *Model) jumpKey(k tea.KeyPressMsg) tea.Cmd {
 	switch k.String() {
 	case "esc", "ctrl+c", "ctrl+k":
 		j.on = false
+	case "ctrl+f":
+		j.on = false
+		return m.searchFor(j.query)
 	case "enter":
 		j.on = false
 		if j.at < len(j.items) {
@@ -205,7 +208,7 @@ func (m *Model) overlayJump(v store.View, frame []canvas.Row) []canvas.Row {
 	for _, r := range rows[from:min(len(rows), from+listH)] {
 		box = append(box, line(r))
 	}
-	box = append(box, edgeRow("╰", "↑↓ choose · enter go · esc close", "╯"))
+	box = append(box, edgeRow("╰", "↑↓ choose · enter go · ctrl+f messages · esc close", "╯"))
 
 	out := make([]canvas.Row, len(frame))
 	for i, r := range frame {
